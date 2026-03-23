@@ -1,0 +1,157 @@
+/* ==========================================================================
+   CONTENEDOR PRINCIPAL DEL HEADER
+   ========================================================================== */
+.profile-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 40px;
+  padding: 20px 0;
+  margin-bottom: 44px;
+}
+
+/* ==========================================================================
+   SECCIÓN DEL AVATAR (IZQUIERDA)
+   ========================================================================== */
+.avatar-section {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.avatar-wrapper {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(45deg, #00ffff, #0066ff);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-wrapper img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid #000;
+  object-fit: cover;
+}
+
+/* ==========================================================================
+   SECCIÓN DE INFORMACIÓN (DERECHA)
+   ========================================================================== */
+.info-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.username-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.username-row h1 {
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: #fff;
+  margin: 0;
+}
+
+/* Botón Editar Perfil */
+.edit-profile-action-btn {
+  background: #18181b;
+  border: 1px solid #27272a;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-profile-action-btn:hover {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+.stats-row {
+  display: flex;
+  gap: 40px;
+}
+
+.stats-row span {
+  font-size: 1rem;
+  color: #efeff1;
+}
+
+.stats-row strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.bio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bio-row .name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.bio-row p {
+  font-size: 0.95rem;
+  color: #efeff1;
+  margin: 0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.bio-row .location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #a8a8a8;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   RESPONSIVE (MÓVIL)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .avatar-wrapper {
+    width: 100px;
+    height: 100px;
+  }
+
+  .username-row {
+    justify-content: center;
+  }
+
+  .stats-row {
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .bio-row .location {
+    justify-content: center;
+  }
+}

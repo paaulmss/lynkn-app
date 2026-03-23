@@ -1,0 +1,403 @@
+.nomad-reg-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #000;
+  padding: 40px 20px;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+/* --- Fondo Coordinado --- */
+.nomad-reg-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('https://posh-images-alts-production.s3.amazonaws.com/68362300980a2af34223395f/2099x1400.webp');
+  background-size: cover;
+  background-position: center;
+  filter: blur(15px) brightness(0.3);
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.nomad-reg-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 450px;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(25px);
+  padding: 50px 40px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Cabecera --- */
+.nomad-reg-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.nomad-logo {
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 10px;
+  margin-bottom: 15px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.nomad-step-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.nomad-step-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #27272a;
+  transition: all 0.4s ease;
+}
+
+.nomad-step-dots .dot.active {
+  background: #fff;
+  transform: scale(1.3);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* --- Contenido de Pasos --- */
+.step-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #71717a;
+  letter-spacing: 2.5px;
+  margin-bottom: 30px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.nomad-input-group {
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.nomad-input-group input:not(.hidden-input) {
+  width: 100%;
+  padding: 14px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #27272a;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.nomad-input-group input:focus {
+  border-bottom-color: #fff;
+}
+
+.nomad-label {
+  display: block;
+  font-size: 0.65rem;
+  color: #52525b;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* --- Subida de Fotos --- */
+.avatar-picker {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0 35px 0;
+}
+
+.avatar-circle {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 1px dashed #3f3f46;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: 0.3s;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.avatar-circle:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-circle span {
+  font-size: 1.5rem;
+  color: #3f3f46;
+}
+
+/* --- Módulo Verificación e IA --- */
+.nomad-verification-box {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 25px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 30px;
+}
+
+.nomad-verify-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.nomad-hint {
+  font-size: 0.65rem;
+  color: #71717a;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.method-btns {
+  display: flex;
+  gap: 12px;
+}
+
+.method-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid #27272a;
+  color: #fff;
+  padding: 14px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+  letter-spacing: 1px;
+}
+
+.method-btn:hover {
+  background: #fff;
+  color: #000;
+}
+
+/* --- Cámara y QR --- */
+.camera-view-container, .qr-view-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.camera-view-container video {
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #3f3f46;
+}
+
+.camera-controls {
+  display: flex;
+  width: 100%;
+  gap: 15px;
+  justify-content: center;
+}
+
+.btn-capture {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 10px 25px;
+  font-weight: 900;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.qr-wrapper {
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+/* --- Selfie Preview & IA Scan Effects --- */
+.selfie-preview-box {
+  position: relative;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #1a1a1a;
+  transition: border-color 0.4s ease;
+}
+
+.selfie-preview-box.success { border-color: #22c55e; }
+.selfie-preview-box.error { border-color: #ef4444; }
+
+.selfie-preview-box img {
+  width: 100%;
+  display: block;
+}
+
+/* Línea de escaneo láser */
+.selfie-preview-box.scanning .scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #00ffff;
+  box-shadow: 0 0 15px #00ffff, 0 0 5px #fff;
+  animation: scanMove 2s infinite ease-in-out;
+  z-index: 5;
+}
+
+@keyframes scanMove {
+  0% { top: 0%; }
+  50% { top: 100%; }
+  100% { top: 0%; }
+}
+
+.nomad-btn-retry {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 2px;
+}
+
+/* --- Botones de Navegación --- */
+.nomad-btn-primary {
+  width: 100%;
+  padding: 20px;
+  background: #fff;
+  color: #000;
+  border: none;
+  font-weight: 900;
+  letter-spacing: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.3s;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.nomad-btn-primary:hover:not(:disabled) {
+  background: #00ffff;
+  transform: translateY(-2px);
+}
+
+.nomad-btn-primary:disabled {
+  background: #1a1a1a;
+  color: #52525b;
+  cursor: not-allowed;
+}
+
+.nomad-footer-btns {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 20px;
+}
+
+.nomad-btn-secondary {
+  background: transparent;
+  border: none;
+  color: #52525b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.2s;
+}
+
+.nomad-btn-secondary:hover {
+  color: #fff;
+}
+
+.btn-text-cancel {
+  background: none;
+  border: none;
+  color: #71717a;
+  font-size: 0.6rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --- Utilidades --- */
+.hidden-input { display: none; }
+
+.animate-in {
+  animation: nomadSlideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes nomadSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.5;
+}
+
+.nomad-loader-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 40px;
+}
+
+.nomad-spinner {
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .nomad-reg-card {
+    padding: 40px 25px;
+  }
+}

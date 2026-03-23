@@ -1,0 +1,120 @@
+.admin-container {
+  padding: 40px;
+  background-color: #000;
+  min-height: 100vh;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+}
+
+.admin-header {
+  margin-bottom: 40px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 20px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 25px;
+}
+
+.admin-card {
+  background: #0a0a0a;
+  border: 1px solid #222;
+  padding: 20px;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.admin-card:hover {
+  border-color: #444;
+  transform: translateY(-5px);
+}
+
+.comparison-view {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.photo-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  background: #000;
+  border-radius: 8px;
+}
+
+.photo-slot span {
+  width: 100%;
+  text-align: center;
+}
+
+.label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  text-align: center;
+}
+
+.img-check {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+
+.highlight {
+  border: 1px solid #fff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+}
+
+.user-details {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.user-details h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.user-details p {
+  margin: 4px 0 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-approve {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 12px;
+  flex: 1.5;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-reject {
+  background: transparent;
+  color: #ff4444;
+  border: 1px solid #331111;
+  padding: 12px;
+  flex: 1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-approve:hover { background: #e0e0e0; }
+.btn-reject:hover { background: #ff4444; color: #fff; }

@@ -1,0 +1,84 @@
+/* Estructura principal de la tarjeta en cuadrícula */
+.grid-post-card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid #1a1a1a;
+  background-color: #050505;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  outline: none;
+}
+
+/* Efectos de interacción (Hover) */
+.grid-post-card:hover,
+.grid-post-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 255, 255, 0.15);
+  border-color: #333;
+}
+
+/* Tratamiento de la imagen del post */
+.post-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.3s ease;
+  display: block;
+}
+
+.grid-post-card:hover .post-card-image {
+  filter: brightness(0.6);
+}
+
+/* Capa de información superpuesta (Overlay) */
+.post-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px;
+  background: linear-gradient(
+    to top, 
+    rgba(0, 0, 0, 0.9) 0%, 
+    rgba(0, 0, 0, 0.4) 40%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: #ffffff;
+}
+
+.grid-post-card:hover .post-card-overlay {
+  opacity: 1;
+}
+
+/* Indicadores de interacción (Likes y Comentarios) */
+.overlay-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.overlay-stats .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Título de la publicación */
+.post-card-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #a1a1aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

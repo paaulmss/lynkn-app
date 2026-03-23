@@ -1,0 +1,59 @@
+:root {
+  /* Variables de diseño Mate */
+  --bg-dark: #000000;
+  --bg-surface: #0a0a0a;
+  --text-main: #ffffff;
+  --text-muted: #71717a;
+  --accent: #ffffff;
+  --border: #1a1a1a;
+
+  /* Configuración de resolución */
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reset total para Full Screen */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+}
+
+body {
+  display: block; 
+  overflow-x: hidden;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.05em;
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.3s ease;
+}
+
+a:hover {
+  opacity: 0.7;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}

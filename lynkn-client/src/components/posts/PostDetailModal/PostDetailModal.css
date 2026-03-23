@@ -1,0 +1,269 @@
+/* Contenedor de fondo con efecto de desenfoque */
+.nomad-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.96);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(12px);
+  animation: nomadFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Estructura principal del Modal */
+.nomad-modal {
+  background: #000;
+  width: 95%;
+  max-width: 1050px;
+  height: 85vh;
+  display: flex;
+  border-radius: 4px;
+  border: 1px solid #1a1a1a;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
+}
+
+/* --- SECCIÓN VISUAL (IZQUIERDA) --- */
+.nomad-image-section {
+  flex: 1.4;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nomad-image-section img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 30px rgba(0,0,0,0.1));
+}
+
+/* --- SECCIÓN DE CONTENIDO (DERECHA) --- */
+.nomad-info-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  position: relative;
+  border-left: 1px solid #1a1a1a;
+}
+
+/* Controles de cierre */
+.nomad-close-desktop {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: transparent;
+  border: none;
+  color: #52525b;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.nomad-close-desktop:hover {
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+/* Área de scroll de información */
+.nomad-scroll-area {
+  padding: 48px 40px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Identidad del organizador */
+.nomad-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.nomad-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #1a1a1a;
+  object-fit: cover;
+}
+
+.nomad-username {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #ffffff;
+}
+
+.nomad-category {
+  font-size: 0.65rem;
+  color: #00ffff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 800;
+}
+
+/* Tipografía de título */
+.nomad-title {
+  font-size: 2.4rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 28px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: -1.5px;
+}
+
+/* Cuadrícula de indicadores clave (KPIs) */
+.nomad-stats-grid {
+  display: flex;
+  gap: 48px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #1a1a1a;
+  padding-bottom: 24px;
+}
+
+.nomad-stat-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.nomad-stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.nomad-stat-label {
+  font-size: 0.6rem;
+  color: #71717a;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+/* Cuerpo de descripción */
+.nomad-description {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #a1a1aa;
+  margin-bottom: 32px;
+  font-weight: 400;
+}
+
+/* Información meta-data */
+.nomad-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.nomad-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #71717a;
+  font-size: 0.85rem;
+}
+
+/* Visualización de Mapa */
+.nomad-map-wrapper {
+  height: 220px;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #1a1a1a;
+  background: #0a0a0a;
+}
+
+.nomad-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* --- PIE DE PÁGINA Y ACCIÓN PRINCIPAL --- */
+.nomad-footer {
+  padding: 32px 40px;
+  border-top: 1px solid #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #000;
+}
+
+.nomad-footer-status {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nomad-spots-left {
+  font-size: 0.65rem;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 800;
+}
+
+/* Barra de progreso de asistencia */
+.nomad-bar-container {
+  width: 100%;
+  height: 2px;
+  background: #1a1a1a;
+}
+
+.nomad-bar-fill {
+  height: 100%;
+  background: #ffffff;
+  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* CTA: Botón de registro */
+.nomad-btn-primary {
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  padding: 22px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.nomad-btn-primary:hover {
+  background: #00ffff;
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(0, 255, 255, 0.2);
+}
+
+/* Adaptación para dispositivos móviles */
+@media (max-width: 768px) {
+  .nomad-modal {
+    flex-direction: column;
+    height: 92vh;
+  }
+
+  .nomad-image-section {
+    flex: none;
+    height: 35%;
+  }
+
+  .nomad-info-section {
+    border-left: none;
+    border-top: 1px solid #1a1a1a;
+  }
+
+  .nomad-close-desktop {
+    display: none;
+  }
+}
