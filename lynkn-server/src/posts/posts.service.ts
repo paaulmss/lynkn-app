@@ -1,3 +1,4 @@
+import { Express } from 'express';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
