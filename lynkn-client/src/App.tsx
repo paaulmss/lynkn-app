@@ -9,6 +9,7 @@ import AdminPanel from "./pages/Admin/AdminPanel";
 import VerifyMobile from "./pages/Auth/VerifyMobile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Explore from "./pages/Explorer/Explore";
+import NotificationsPage from "./components/notifcations/NotificationsPage"; 
 
 function App() {
   return (
@@ -33,7 +34,7 @@ function App() {
             }
           />
 
-          {/* Explorar/Mapa */}
+          {/* Explore/Mapa */}
           <Route
             path="/explore"
             element={
@@ -43,7 +44,17 @@ function App() {
             }
           />
 
-          {/* --- RUTAS DE ADMINISTRACIÓN (Requieren Login + Rol Admin) --- */}
+          {/* Centro de Notificaciones*/}
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- RUTAS DE ADMINISTRACIÓN ---*/}
           <Route
             path="/admin-panel"
             element={

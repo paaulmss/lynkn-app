@@ -20,10 +20,9 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
-  // Definición del puerto según el entorno de despliegue
-  const port = process.env.PORT || 10000;
+ const port = process.env.PORT || 10000;
 
-  await app.listen(port, '0.0.0.0');
+ await app.listen(port);
 
   console.log(`Servidor LYNKN operacional en el puerto: ${port}`);
 }

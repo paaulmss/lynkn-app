@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { User } from './entities/user.entity';
 
@@ -84,6 +84,23 @@ async findPending() {
     .eq('status_verif', 'pending');
 
   if (error) throw error;
+  return data;
+}
+
+async updateProfile(userId: number, updateData: any) {
+  const { data, error } = await this.supabase
+    .from('users')
+    .update({
+      username: updateData.username,
+      bio: updateData.bio,
+      birth_day: updateData.birth_day,
+      foto_perfil: updateData.foto_perfil,
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw new InternalServerErrorException(error.message);
   return data;
 }
 }

@@ -1,13 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import {
-  Map as MapIcon,
-  LayoutList,
-  Menu,
-  Search,
-  Filter,
-} from "lucide-react";
+import { Map as MapIcon, LayoutList, Menu, Search, Filter } from "lucide-react";
 
 import { useAuth } from "../../hooks/useAuth";
 import Sidebar from "../../components/Sidebar";
@@ -17,7 +11,6 @@ import PostCard from "../../components/posts/PostCard/PostCard";
 import api from "../../api/axiosConfig";
 import "./Explore.css";
 
-// --- DEFINICIÓN DE TIPOS ---
 interface Post {
   id: number;
   title: string;
@@ -26,6 +19,7 @@ interface Post {
   lat: number;
   lng: number;
   category: string;
+  user_id: string;
   max_particip?: number;
   event_date?: string;
   users: {
@@ -44,7 +38,8 @@ interface UserData {
 }
 
 const SecurityOverlay = ({ user }: { user: UserData | null }) => {
-  const isAccessGranted = user?.role === "admin" || user?.status_verif === "approved";
+  const isAccessGranted =
+    user?.role === "admin" || user?.status_verif === "approved";
   if (!user || isAccessGranted) return null;
 
   return (
@@ -53,13 +48,21 @@ const SecurityOverlay = ({ user }: { user: UserData | null }) => {
         {user.status_verif === "pending" ? (
           <>
             <h2>ACCESO EN REVISIÓN</h2>
-            <p>Tu solicitud está siendo validada. El acceso se activará tras la aprobación.</p>
+            <p>
+              Tu solicitud está siendo validada. El acceso se activará tras la
+              aprobación.
+            </p>
           </>
         ) : (
           <>
             <h2>ACCESO DENEGADO</h2>
-            <p>Tu identidad no pudo ser verificada. El acceso está restringido.</p>
-            <button className="reverify-btn" onClick={() => (window.location.href = "/profile")}>
+            <p>
+              Tu identidad no pudo ser verificada. El acceso está restringido.
+            </p>
+            <button
+              className="reverify-btn"
+              onClick={() => (window.location.href = "/profile")}
+            >
               VOLVER A VERIFICAR
             </button>
           </>
@@ -80,22 +83,23 @@ const Explore = () => {
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
 
-  const loadPosts = useCallback(async (isMounted: boolean) => {
+  const fetchPosts = useCallback(async () => {
     try {
       const response = await api.get("/posts");
-      if (isMounted) setPosts(response.data);
+      setPosts(response.data);
     } catch (error) {
       console.error("Error al cargar los posts:", error);
     }
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    loadPosts(isMounted);
-    return () => { isMounted = false; };
-  }, [loadPosts]);
+    const initExplore = async () => {
+      await fetchPosts();
+    };
 
-  // Inicialización del Mapa
+    initExplore();
+  }, [fetchPosts]);
+
   useEffect(() => {
     if (viewMode !== "map" || !mapContainer.current) return;
 
@@ -110,7 +114,10 @@ const Explore = () => {
       attributionControl: false,
     });
 
-    map.current.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+    map.current.addControl(
+      new maplibregl.NavigationControl({ showCompass: false }),
+      "bottom-right",
+    );
 
     return () => {
       map.current?.remove();
@@ -118,7 +125,6 @@ const Explore = () => {
     };
   }, [viewMode]);
 
-  // Marcadores con Popups estilizados
   useEffect(() => {
     if (!map.current || posts.length === 0) return;
 
@@ -143,15 +149,17 @@ const Explore = () => {
                 <button class="popup-view-btn" id="btn-${post.id}">VER DETALLES</button>
               </div>
             </div>
-          `)
+          `),
         )
         .addTo(map.current!);
 
-        marker.getPopup().on('open', () => {
-            document.getElementById(`btn-${post.id}`)?.addEventListener('click', () => {
-                setSelectedPost(post);
-            });
-        });
+      marker.getPopup().on("open", () => {
+        document
+          .getElementById(`btn-${post.id}`)
+          ?.addEventListener("click", () => {
+            setSelectedPost(post);
+          });
+      });
 
       markers.current.push(marker);
     });
@@ -164,7 +172,7 @@ const Explore = () => {
 
   const handlePostSuccess = () => {
     setIsCreatePostOpen(false);
-    loadPosts(true); 
+    fetchPosts();
   };
 
   const isLocked = user?.role !== "admin" && user?.status_verif !== "approved";
@@ -180,7 +188,11 @@ const Explore = () => {
 
       <main className={`main-content ${isSidebarOpen ? "sidebar-active" : ""}`}>
         <header className="top-navbar">
-          <button className="icon-btn menu-trigger" onClick={toggleSidebar} type="button">
+          <button
+            className="icon-btn menu-trigger"
+            onClick={toggleSidebar}
+            type="button"
+          >
             <Menu color="white" size={24} />
           </button>
           <div className="search-bar">
@@ -197,11 +209,11 @@ const Explore = () => {
             <div ref={mapContainer} className="map-div" />
           ) : (
             <div className="explore-posts-grid">
-               {posts.map((post) => (
-                <PostCard 
-                  key={post.id} 
-                  post={post} 
-                  onClick={() => setSelectedPost(post)} 
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onClick={() => setSelectedPost(post)}
                 />
               ))}
             </div>
@@ -209,24 +221,38 @@ const Explore = () => {
         </section>
 
         <div className="mode-switcher">
-          <button className={`switch-nav-btn ${viewMode === "map" ? "active" : ""}`} onClick={() => setViewMode("map")}>
+          <button
+            className={`switch-nav-btn ${viewMode === "map" ? "active" : ""}`}
+            onClick={() => setViewMode("map")}
+          >
             <MapIcon size={18} /> MAPA
           </button>
-          <button className={`switch-nav-btn ${viewMode === "posts" ? "active" : ""}`} onClick={() => setViewMode("posts")}>
+          <button
+            className={`switch-nav-btn ${viewMode === "posts" ? "active" : ""}`}
+            onClick={() => setViewMode("posts")}
+          >
             <LayoutList size={18} /> POSTS
           </button>
         </div>
       </main>
 
       {selectedPost && (
-        <PostDetailModal 
-          post={selectedPost} 
-          onClose={() => setSelectedPost(null)} 
+        <PostDetailModal
+          post={{
+            ...selectedPost,
+            user_id: Number(selectedPost.user_id),
+            event_date: selectedPost.event_date || "",
+            max_particip: selectedPost.max_particip || 0,
+          }}
+          onClose={() => setSelectedPost(null)}
         />
       )}
 
       {isCreatePostOpen && (
-        <CreatePostModal onClose={() => setIsCreatePostOpen(false)} onSuccess={handlePostSuccess} />
+        <CreatePostModal
+          onClose={() => setIsCreatePostOpen(false)}
+          onSuccess={handlePostSuccess}
+        />
       )}
     </div>
   );

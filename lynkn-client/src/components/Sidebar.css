@@ -15,7 +15,6 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Estados de apertura/cierre */
 .sidebar-component.closed {
   transform: translateX(-100%);
 }
@@ -24,7 +23,6 @@
   transform: translateX(0);
 }
 
-/* Overlay (Fondo oscuro al abrir en móvil) */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -74,9 +72,9 @@
 }
 
 .close-sidebar-btn {
-  background: #fff; /* Fondo blanco para la X */
+  background: #fff;
   border: none;
-  color: #000; /* X negra */
+  color: #000;
   width: 32px;
   height: 32px;
   border-radius: 6px;
@@ -156,11 +154,39 @@
 }
 
 /* ==========================================================================
+   INDICADORES (BADGES)
+   ========================================================================== */
+.icon-with-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #ff4757;
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2px;
+  border: 2px solid #000;
+  box-shadow: 0 0 10px rgba(255, 71, 87, 0.3);
+}
+
+/* ==========================================================================
    FOOTER (CERRAR SESIÓN)
    ========================================================================== */
 .sidebar-footer {
   margin-top: auto; 
-  padding: 30px 16px; /* Espaciado generoso */
+  padding: 30px 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axiosConfig"; 
 import "./AdminPanel.css";
+import { AxiosError } from "axios";
 
 interface User {
   id: number;
@@ -35,9 +36,13 @@ const AdminPanel: React.FC = () => {
       
       setPendingUsers((prev) => prev.filter((u) => u.id !== id));
       alert(`Usuario ${status === "approved" ? "Aprobado" : "Rechazado"} con éxito`);
-    } catch (error: any) {
-      console.error("Error en verificación:", error.response?.data);
-      alert(error.response?.data?.message || "Error al actualizar estado. ¿Tu sesión ha expirado?");
+    } catch (error) { 
+      const err = error as AxiosError<{ message?: string }>;
+      
+      console.error("Error en verificación:", err.response?.data);
+      
+      const errorMessage = err.response?.data?.message || "Error al actualizar estado. ¿Tu sesión ha expirado?";
+      alert(errorMessage);
     }
   };
 

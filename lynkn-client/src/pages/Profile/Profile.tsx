@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Grid,
   Map as MapIcon,
@@ -9,6 +9,7 @@ import {
   Loader2,
 } from "lucide-react";
 import "./Profile.css";
+import EditProfileModal from "./EditProfileModal"; 
 import ProfileMap from "./ProfileMap";
 import ProfileHeader from "./ProfileHeader";
 import Sidebar from "../../components/Sidebar";
@@ -34,6 +35,7 @@ export interface Post {
   created_at?: string;
   max_particip?: number;
   status?: string;
+  event_date?: string; 
 }
 
 const Profile = () => {
@@ -48,14 +50,6 @@ const Profile = () => {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    username: user?.username || "",
-    bio: user?.bio || "",
-    location: user?.location || "",
-    foto_perfil: user?.foto_perfil || "",
-  });
-
   useEffect(() => {
     const fetchMyPosts = async () => {
       if (!user?.id) return;
@@ -63,8 +57,8 @@ const Profile = () => {
       try {
         const response = await api.get(`/posts/user/${user.id}`);
         setUserPosts(response.data);
-      } catch (error) {
-        console.error("Error cargando posts:", error);
+      } catch {
+        console.error("Error cargando posts");
       } finally {
         setIsLoading(false);
       }
@@ -79,20 +73,6 @@ const Profile = () => {
       </div>
     );
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      await api.put(`/users/${user.id}/profile`, formData);
-      setIsEditModalOpen(false);
-      window.location.reload();
-    } catch (error) {
-      alert("Error al guardar cambios.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handlePhotoUpload = async (imageData: string) => {
     try {
       await api.post("/auth/reverify", {
@@ -101,7 +81,7 @@ const Profile = () => {
       });
       setIsReverifyOpen(false);
       window.location.reload();
-    } catch (error) {
+    } catch {
       alert("Error al subir la verificación.");
     }
   };
@@ -248,46 +228,27 @@ const Profile = () => {
 
       {selectedPost && viewMode === "posts" && (
         <PostDetailModal
-          post={selectedPost}
+          post={{
+            ...selectedPost,
+            id: Number(selectedPost.id),
+            user_id: Number(selectedPost.user_id),
+            image_url: selectedPost.image_url || "",
+            event_date: selectedPost.event_date || "",
+            max_particip: selectedPost.max_particip || 0, 
+          }}
           onClose={() => setSelectedPost(null)}
         />
       )}
 
       {isEditModalOpen && (
-        <div
-          className="modal-overlay blur"
-          onClick={() => setIsEditModalOpen(false)}
-        >
-          <div
-            className="edit-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="edit-modal-header">
-              <h3>EDITAR PERFIL</h3>
-              <button
-                className="close-btn"
-                onClick={() => setIsEditModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <form className="edit-form" onSubmit={handleSaveProfile}>
-              <div className="form-group">
-                <label>NOMBRE DE USUARIO</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                />
-              </div>
-              <button type="submit" className="save-btn" disabled={isSaving}>
-                GUARDAR
-              </button>
-            </form>
-          </div>
-        </div>
+        <EditProfileModal
+          user={user}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={() => {
+            setIsEditModalOpen(false);
+            window.location.reload(); 
+          }}
+        />
       )}
 
       {isCreatePostOpen && (

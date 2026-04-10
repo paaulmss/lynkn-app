@@ -1,0 +1,160 @@
+.notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: #050505;
+  border: 1px solid #111;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.notif-card:hover {
+  border-color: #333;
+  background: #0a0a0a;
+  transform: translateY(-2px);
+}
+
+.notif-card.unread {
+  border-left: 3px solid #00ffff;
+  background: rgba(0, 255, 255, 0.02);
+}
+
+.notif-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #111;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.notif-content {
+  flex: 1;
+}
+
+.notif-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #a1a1aa;
+  line-height: 1.5;
+}
+
+.notif-content b {
+  color: #fff;
+  font-weight: 700;
+}
+
+.notif-time {
+  display: block;
+  font-size: 0.75rem;
+  color: #52525b;
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  background: #00ffff;
+  border-radius: 50%;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  box-shadow: 0 0 10px #00ffff;
+}
+
+.notif-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn-approve-notif, .btn-reject-notif {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+/* Botón Aceptar*/
+.btn-approve-notif {
+  background: #00ff88;
+  color: #000;
+}
+
+.btn-approve-notif:hover {
+  background: #00ffcc;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+
+/* Botón Rechazar*/
+.btn-reject-notif {
+  background: #111;
+  color: #ef4444;
+  border: 1px solid #333;
+}
+
+.btn-reject-notif:hover {
+  background: #1a1a1a;
+  border-color: #ef4444;
+  transform: scale(1.05);
+}
+
+.notif-card.read .btn-reject-notif {
+  opacity: 0.7;
+}
+
+
+.notif-avatar-container {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
+.notif-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #111;
+}
+
+.notif-type-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #050505;
+}
+
+.notif-type-badge.join_request { background: #00ffff; color: #000; }
+.notif-type-badge.accepted { background: #22c55e; color: #000; }
+.notif-type-badge.rejected { background: #ef4444; color: #fff; }
+.notif-type-badge.info_pending { background: #71717a; color: #fff; }
+
+.notif-content {
+  flex: 1;
+  padding-top: 2px;
+}

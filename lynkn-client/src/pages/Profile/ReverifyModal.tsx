@@ -47,7 +47,7 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
       if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (err) {
+    } catch { 
       alert("No se pudo acceder a la cámara.");
       setMode('options');
     }

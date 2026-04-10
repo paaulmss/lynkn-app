@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'; // Añadimos hooks
 import { 
   User, 
   PlusSquare, 
@@ -20,7 +21,23 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, onClose, activePage, onNewPostClick }: SidebarProps) => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        if (!user?.id) return;
+        const response = await fetch(`http://localhost:4000/notifications/user/${user.id}/unread-count`);
+        const data = await response.json();
+        setUnreadCount(data.count);
+      } catch (err) {
+        console.error("Error al obtener conteo de notificaciones:", err);
+      }
+    };
+
+    fetchUnreadCount();
+  }, [user?.id, activePage]); 
 
   return (
     <>
@@ -44,20 +61,24 @@ const Sidebar = ({ isOpen, onClose, activePage, onNewPostClick }: SidebarProps) 
           <div className="nav-group">
             <span className="group-title">MENÚ PRINCIPAL</span>
             
-            <Link to="/explore" className={`sidebar-item ${activePage === 'explore' ? 'active' : ''}`}>
+            <Link to="/explore" className={`sidebar-item ${activePage === 'explore' ? 'active' : ''}`} onClick={onClose}>
               <MapIcon size={20} /> <span>Explorar</span>
             </Link>
 
-            <Link to="/profile" className={`sidebar-item ${activePage === 'profile' ? 'active' : ''}`}>
+            <Link to="/profile" className={`sidebar-item ${activePage === 'profile' ? 'active' : ''}`} onClick={onClose}>
               <User size={20} /> <span>Perfil</span>
             </Link>
 
-            <Link to="/messages" className={`sidebar-item ${activePage === 'messages' ? 'active' : ''}`}>
+            <Link to="/messages" className={`sidebar-item ${activePage === 'messages' ? 'active' : ''}`} onClick={onClose}>
               <MessageCircle size={20} /> <span>Mensajes</span>
             </Link>
 
-            <Link to="/notifications" className={`sidebar-item ${activePage === 'notifications' ? 'active' : ''}`}>
-              <Bell size={20} /> <span>Notificaciones</span>
+            <Link to="/notifications" className={`sidebar-item ${activePage === 'notifications' ? 'active' : ''}`} onClick={onClose}>
+              <div className="icon-with-badge">
+                <Bell size={20} />
+                {unreadCount > 0 && <span className="sidebar-badge">{unreadCount}</span>}
+              </div>
+              <span>Notificaciones</span>
             </Link>
           </div>
 
@@ -66,12 +87,12 @@ const Sidebar = ({ isOpen, onClose, activePage, onNewPostClick }: SidebarProps) 
             
             <button 
               className="sidebar-item accent no-button-styles" 
-              onClick={onNewPostClick}
+              onClick={() => { onNewPostClick(); onClose(); }}
             >
               <PlusSquare size={20} /> <span>Nuevo Post</span>
             </button>
 
-            <Link to="/settings" className={`sidebar-item ${activePage === 'settings' ? 'active' : ''}`}>
+            <Link to="/settings" className={`sidebar-item ${activePage === 'settings' ? 'active' : ''}`} onClick={onClose}>
               <Settings size={20} /> <span>Ajustes</span>
             </Link>
           </div>
