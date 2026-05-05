@@ -1,6 +1,4 @@
-/* ==========================================================================
-   CONTENEDOR PRINCIPAL DEL SIDEBAR
-   ========================================================================== */
+/* --- CONTENEDOR PRINCIPAL --- */
 .sidebar-component {
   position: fixed;
   top: 0;
@@ -15,13 +13,8 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.sidebar-component.closed {
-  transform: translateX(-100%);
-}
-
-.sidebar-component.open {
-  transform: translateX(0);
-}
+.sidebar-component.closed { transform: translateX(-100%); }
+.sidebar-component.open { transform: translateX(0); }
 
 .sidebar-overlay {
   position: fixed;
@@ -34,75 +27,36 @@
   transition: all 0.3s ease;
 }
 
-.sidebar-overlay.show {
-  opacity: 1;
-  visibility: visible;
-}
+.sidebar-overlay.show { opacity: 1; visibility: visible; }
 
-/* ==========================================================================
-   HEADER (LOGO Y CIERRE)
-   ========================================================================== */
+/* --- HEADER SINCRONIZADO --- */
 .sidebar-header {
-  padding: 40px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo-section {
+  height: 70px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  padding: 0 24px;
+  border-bottom: 1px solid #1a1a1a;
+  box-sizing: border-box;
 }
 
-.logo-glow {
-  width: 10px;
-  height: 10px;
-  background: #00ffff;
-  border-radius: 50%;
-  box-shadow: 0 0 15px #00ffff;
-}
-
-.logo-text {
-  letter-spacing: 5px;
-  font-weight: 900;
-  font-size: 1.4rem;
-  color: #fff;
+.sidebar-header h2 {
+  font-size: 1.1rem;
   margin: 0;
+  color: #00f2ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.close-sidebar-btn {
-  background: #fff;
-  border: none;
-  color: #000;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s;
-}
-
-.close-sidebar-btn:hover {
-  opacity: 0.8;
-}
-
-/* ==========================================================================
-   NAVEGACIÓN Y LINKS
-   ========================================================================== */
+/* --- NAVEGACION --- */
 .sidebar-nav-links {
   flex: 1;
-  padding: 0 16px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
 }
 
-.nav-group {
-  margin-bottom: 30px;
-}
+.nav-group { margin-bottom: 30px; }
 
 .group-title {
   font-size: 10px;
@@ -143,19 +97,16 @@
   color: #00ffff;
 }
 
+/* Boton Nuevo Post*/
 .sidebar-item.accent {
   background: #fff;
   color: #000;
   margin-top: 10px;
 }
 
-.sidebar-item.accent:hover {
-  background: #e4e4e7;
-}
+.sidebar-item.accent:hover { background: #e4e4e7; }
 
-/* ==========================================================================
-   INDICADORES (BADGES)
-   ========================================================================== */
+/* --- BADGES --- */
 .icon-with-badge {
   position: relative;
   display: flex;
@@ -176,17 +127,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2px;
   border: 2px solid #000;
-  box-shadow: 0 0 10px rgba(255, 71, 87, 0.3);
 }
 
-/* ==========================================================================
-   FOOTER (CERRAR SESIÓN)
-   ========================================================================== */
+/* --- FOOTER --- */
 .sidebar-footer {
   margin-top: auto; 
-  padding: 30px 16px;
+  padding: 20px 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -201,7 +148,6 @@
   border-radius: 12px;
   color: #888;
   font-weight: 600;
-  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -211,16 +157,7 @@
   color: #ff4444 !important;
 }
 
-/* ==========================================================================
-   RESPONSIVE (DESKTOP)
-   ========================================================================== */
 @media (min-width: 1024px) {
-  .sidebar-component {
-    position: fixed;
-  }
-
-  .sidebar-overlay, 
-  .close-sidebar-btn {
-    display: none;
-  }
+  .sidebar-component { position: fixed; }
+  .sidebar-overlay, .close-sidebar-btn { display: none; }
 }

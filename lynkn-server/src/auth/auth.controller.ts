@@ -10,7 +10,7 @@ import {
   Logger 
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -37,7 +37,8 @@ export class AuthController {
       }
       return await this.authService.register(userData);
     } catch (error) {
-      this.logger.error(`Error en Registro: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error en Registro: ${errorMessage}`);
       throw error;
     }
   }
@@ -47,7 +48,8 @@ export class AuthController {
     try {
       return await this.authService.login(loginData);
     } catch (error) {
-      this.logger.error(`Error en Login: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error en Login: ${errorMessage}`);
       throw error;
     }
   }
@@ -61,7 +63,8 @@ export class AuthController {
         message: 'Verificación enviada correctamente. Estado: Pendiente.' 
       };
     } catch (error) {
-      this.logger.error(`Error en Reverify: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error en Reverify: ${errorMessage}`);
       throw new InternalServerErrorException('No se pudo procesar la reverificación');
     }
   }
@@ -73,7 +76,8 @@ export class AuthController {
     try {
       return await this.usersService.findPending();
     } catch (error) {
-      this.logger.error(`Error obteniendo pendientes: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error obteniendo pendientes: ${errorMessage}`);
       throw new InternalServerErrorException('Error al obtener usuarios pendientes');
     }
   }
@@ -88,7 +92,8 @@ export class AuthController {
       await this.usersService.updateStatus(Number(id), status);
       return { status: 'success', message: `Usuario actualizado a ${status}` };
     } catch (error) {
-      this.logger.error(`Error verificando usuario ${id}: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error verificando usuario ${id}: ${errorMessage}`);
       throw new InternalServerErrorException('No se pudo actualizar el estado del usuario');
     }
   }

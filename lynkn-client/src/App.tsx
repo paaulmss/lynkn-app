@@ -10,13 +10,14 @@ import VerifyMobile from "./pages/Auth/VerifyMobile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Explore from "./pages/Explorer/Explore";
 import NotificationsPage from "./components/notifcations/NotificationsPage"; 
+import MessagesPage from "./pages/Messages/MessagesPage";
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <Routes>
-          {/* --- VISTAS PÚBLICAS --- */}
+          {/* --- VISTAS PUBLICAS --- */}
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
@@ -54,7 +55,17 @@ function App() {
             }
           />
 
-          {/* --- RUTAS DE ADMINISTRACIÓN ---*/}
+          {/* MENSAJES / CHAT */}
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- RUTAS DE ADMINISTRACION ---*/}
           <Route
             path="/admin-panel"
             element={

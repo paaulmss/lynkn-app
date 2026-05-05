@@ -58,23 +58,35 @@
   top: 20px;
   left: 20px;
   right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  z-index: 1000;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+}
+
+.top-navbar > * {
+  pointer-events: auto;
 }
 
 .search-bar {
   flex: 1;
-  background: rgba(15, 15, 15, 0.8);
-  border: 1px solid #27272a;
-  border-radius: 12px;
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
   display: flex;
   align-items: center;
-  padding: 0 15px;
+  padding: 0 18px;
   gap: 12px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px);
   height: 48px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.search-bar:focus-within {
+  border-color: rgba(0, 255, 255, 0.4); /* Brillo cian suave al enfocar */
+  background: rgba(15, 15, 15, 0.9);
+  box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1);
 }
 
 .search-bar input {
@@ -83,8 +95,28 @@
   color: #fff;
   flex: 1;
   outline: none;
-  font-size: 0.8rem;
-  letter-spacing: 1px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  height: 100%;
+  line-height: 1;
+}
+
+.search-bar input::placeholder {
+  color: #71717a;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ICONOS DENTRO DE LA SEARCH BAR */
+.search-bar svg {
+  color: #71717a;
+  transition: color 0.3s ease;
+}
+
+.search-bar:focus-within svg {
+  color: #00ffff;
 }
 
 /* SWITCHER DE MODO (MAPA/POSTS) */
@@ -123,9 +155,6 @@
   color: #000;
 }
 
-/* ==========================================================================
-   NUEVA CUADRÍCULA DE POSTS (ESTILO PERFIL)
-   ========================================================================== */
 .explore-posts-grid {
   height: 100%;
   overflow-y: auto;
@@ -138,9 +167,6 @@
   margin: 0 auto;
 }
 
-/* ==========================================================================
-   ESTILO DE MAPA Y MARCADORES NEÓN
-   ========================================================================== */
 .map-div { width: 100%; height: 100%; background: #000; }
 
 .post-marker-neon {
@@ -204,8 +230,8 @@
 
 /* AJUSTE MENU TRIGGER */
 .icon-btn.menu-trigger {
-  background: rgba(15, 15, 15, 0.8);
-  border: 1px solid #27272a;
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   width: 48px;
   height: 48px;
@@ -213,7 +239,15 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+  flex-shrink: 0; /* Evita que se deforme */
+}
+
+.icon-btn.menu-trigger:hover {
+  background: rgba(20, 20, 20, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 /* SPINNER */

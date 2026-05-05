@@ -186,7 +186,7 @@ const Explore = () => {
         onNewPostClick={() => setIsCreatePostOpen(true)}
       />
 
-      <main className={`main-content ${isSidebarOpen ? "sidebar-active" : ""}`}>
+      <main className={`main-content explore-view ${isSidebarOpen ? "sidebar-active" : ""}`}>
         <header className="top-navbar">
           <button
             className="icon-btn menu-trigger"

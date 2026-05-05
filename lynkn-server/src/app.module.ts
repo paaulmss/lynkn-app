@@ -7,6 +7,7 @@ import { AdminModule } from './admin/admin.module';
 import { SocketGateway } from './socket/socket.gateway';
 import { PostsModule } from './posts/posts.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SupabaseService } from './supabase.service'; 
 
 @Module({
   imports: [
@@ -19,6 +20,6 @@ import { NotificationsModule } from './notifications/notifications.module';
     PostsModule,
     NotificationsModule,
   ],
-  providers: [SocketGateway],
+  providers: [SocketGateway, SupabaseService],
 })
 export class AppModule { }
