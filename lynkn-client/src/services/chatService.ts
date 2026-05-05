@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = import.meta.env.PROD 
-  ? 'https://tu-backend-en-render.onrender.com'
+  ? 'https://lynkn-backend.onrender.com'
   : 'http://localhost:3000';
 
 export interface ServerMessage {
