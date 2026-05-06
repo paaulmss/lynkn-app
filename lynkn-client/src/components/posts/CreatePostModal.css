@@ -110,23 +110,13 @@
   text-transform: uppercase;
 }
 
-.preview-container {
-  width: 100%;
-  height: 100%;
-}
-
-.preview-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
 .blur-unsafe {
   filter: blur(50px) grayscale(1);
 }
 
 /* ==========================================================================
-   SELECTOR DE UBICACIÓN INTERACTIVO
+   SELECTOR DE UBICACION INTERACTIVO
    ========================================================================== */
 .location-picker-container {
   margin-bottom: 2rem;
@@ -302,7 +292,7 @@
 }
 
 /* ==========================================================================
-   BOTÓN PUBLICAR
+   BOTON PUBLICAR
    ========================================================================== */
 .submit-post-btn {
   width: 100%;
@@ -332,7 +322,7 @@
 }
 
 /* ==========================================================================
-   VISTA DE ÉXITO
+   VISTA DE EXITO
    ========================================================================== */
 .success-container {
   display: flex;
@@ -363,6 +353,26 @@
   color: #555;
   font-size: 0.8rem;
   margin-top: 10px;
+}
+
+.preview-container {
+  width: 100%;
+  height: 250px;
+  background-color: #1a1a1a;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-container img {
+  width: 100%;
+  height: 100%;
+  
+  object-fit: contain; 
+  
+  display: block;
 }
 
 .spin { animation: spin 1s linear infinite; }

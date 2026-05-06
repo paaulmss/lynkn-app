@@ -10,26 +10,47 @@ import {
   HttpStatus,
   HttpCode,
   Patch,
-  InternalServerErrorException
+  InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
 import { Express } from 'express';
 
 /**
- * Controlador para la gestión de publicaciones y eventos
+ * Controlador para la gestion de publicaciones y eventos
  */
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) { }
+  private readonly genAI: GoogleGenerativeAI;
+  private readonly safetyModel: any;
+
+  constructor(private readonly postsService: PostsService) {
+    // Inicializamos Gemini con API KEY
+    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    // Usamos el modelo flash por su rapidez y bajo consumo
+    this.safetyModel = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))
   async create(
-    @UploadedFile() file: Express.Multer.File, 
+    @UploadedFile() file: any, 
     @Body() body: any
   ) {
+    // 1. Validamos el texto con Gemini antes de hacer nada
+    const validation = await this.validateContent({ 
+      text: `${body.title} ${body.description}` 
+    });
+    
+    // 2. Si la IA dice que no es seguro, lanzamos la excepcion
+    if (!validation.safe) {
+      throw new BadRequestException('Contenido inapropiado detectado por la IA.');
+    }
+
+    // 3. Solo si es seguro, procedemos a crear el post
     return this.postsService.createPost(file, body);
   }
 
@@ -42,7 +63,7 @@ export class PostsController {
   }
 
   /**
-   * Obtiene las publicaciones asociadas a un identificador de usuario específico.
+   * Obtiene las publicaciones asociadas a un identificador de usuario especifico.
    */
   @Get('user/:userId')
   async findByUser(@Param('userId', ParseIntPipe) userId: number) {
@@ -68,17 +89,15 @@ export class PostsController {
   }
 
   /**
-   * Gestiona la aceptación o rechazo de una solicitud directamente desde una notificación.
+   * Gestiona la aceptacion o rechazo de una solicitud directamente desde una notificacion.
    */
   @Patch('participation-by-notif/:notifId')
   async handleActionFromNotif(
     @Param('notifId', ParseIntPipe) notifId: number,
     @Body('status') status: 'accepted' | 'rejected'
   ) {
-    // 1. Accedemos al cliente de supabase a través del servicio
     const supabase = (this.postsService as any).supabase;
 
-    // 2. Buscamos la notificación para identificar el post y al usuario solicitante (sender_id)
     const { data: notif, error: notifError } = await supabase
       .from('notifications')
       .select('post_id, sender_id')
@@ -89,7 +108,6 @@ export class PostsController {
       throw new InternalServerErrorException('No se ha podido localizar la notificación vinculada.');
     }
 
-    // 3. Buscamos el ID de la fila en 'participations' correspondiente
     const { data: participation, error: partError } = await supabase
       .from('participations')
       .select('id')
@@ -101,7 +119,30 @@ export class PostsController {
       throw new InternalServerErrorException('No existe una solicitud de participación válida para esta notificación.');
     }
 
-    // 4. Ejecutamos la lógica de actualización (cambio de estado, contador de plazas y avisos)
     return await this.postsService.updateParticipationStatus(participation.id, status);
+  }
+
+  @Post('validate-content')
+  async validateContent(@Body() data: { text: string }) {
+    try {
+      const prompt = `Analiza el siguiente texto de una red social y determina si infringe normas de comunidad (odio, acoso, violencia o contenido sexual explícito). 
+      Responde UNICAMENTE con la palabra "SAFE" si es permitido o "UNSAFE" si debe ser bloqueado. 
+      Texto a analizar: "${data.text}"`;
+
+      const result = await this.safetyModel.generateContent(prompt);
+      const responseText = result.response.text().toUpperCase();
+
+      if (responseText.includes("UNSAFE")) {
+        return { 
+          safe: false, 
+          reasons: ["Contenido inapropiado detectado por filtros de seguridad"] 
+        };
+      }
+
+      return { safe: true };
+    } catch (error) {
+      console.error('Error con Gemini:', error);
+      return { safe: true }; 
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthProvider"; 
+import { Toaster } from "sonner";
 
 import Home from "./pages/Home/Home";
 import Register from "./pages/Auth/Register";
@@ -16,6 +17,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <Toaster position="bottom-right" theme="dark" richColors closeButton />
         <Routes>
           {/* --- VISTAS PUBLICAS --- */}
           <Route path="/" element={<Home />} />

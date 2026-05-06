@@ -7,7 +7,7 @@ export class PostsService {
 
   constructor(private readonly supabaseService: SupabaseService) { }
 
-  private get supabase() {
+  public get supabase() {
     return this.supabaseService.getClient();
   }
 
@@ -32,7 +32,7 @@ export class PostsService {
   }
 
   /**
-   * Procesa la creación de un nuevo post y la carga de su imagen asociada.
+   * Procesa la creacion de un nuevo post y la carga de su imagen asociada.
    */
   async createPost(file: Express.Multer.File, body: any) {
     let imageUrl: string | null = null;
@@ -130,7 +130,7 @@ export class PostsService {
     if (error) throw new InternalServerErrorException(error.message);
 
     if (participation && participation.posts) {
-      // NOTIFICACIÓN AL DUEÑO: "X quiere unirse a tu actividad"
+      // NOTIFICACION AL DUEÑO: "X quiere unirse a tu actividad"
       await this.createNotification(
         participation.posts.user_id, // Receptor (Dueño)
         userId,                      // Remitente (Solicitante)
@@ -138,7 +138,7 @@ export class PostsService {
         'join_request'
       );
 
-      // NOTIFICACIÓN AL SOLICITANTE
+      // NOTIFICACION AL SOLICITANTE
       await this.createNotification(
         userId,                      // Receptor (Solicitante)
         participation.posts.user_id, // Remitente (Dueño)
@@ -166,7 +166,7 @@ export class PostsService {
   }
 
   /**
-   * 2. ACTUALIZACIÓN DE ESTADO (Aceptar/Rechazar)
+   * 2. ACTUALIZACION DE ESTADO (Aceptar/Rechazar)
    */
 
   async updateParticipationStatus(participationId: number, status: 'accepted' | 'rejected') {
@@ -186,10 +186,10 @@ export class PostsService {
         .delete()
         .eq('user_id', part.posts.user_id) // ID (dueño)
         .eq('post_id', part.post_id)       // El post
-        .eq('sender_id', part.user_id)     // El usuario que solicitó
-        .eq('type', 'join_request');       // Solo borramos la petición
+        .eq('sender_id', part.user_id)     // El usuario que solicito
+        .eq('type', 'join_request');       // Solo borramos la peticion
 
-      // 3. EL FEEDBACK: Creamos la notificación para el usuario que pidió unirse.
+      // 3. EL FEEDBACK: Creamos la notificación para el usuario que pidio unirse.
       await this.createNotification(
         part.user_id,        // Receptor: El invitado
         part.posts.user_id,  // Remitente: Tú
