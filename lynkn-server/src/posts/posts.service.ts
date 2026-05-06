@@ -75,7 +75,7 @@ export class PostsService {
           event_date: body.event_date || new Date().toISOString(),
           status: 'active',
           is_visible: true,
-          moderation_status: 'pending'
+          moderation_status: 'approved'
         },
       ])
       .select();

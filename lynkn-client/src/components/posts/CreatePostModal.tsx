@@ -1,35 +1,23 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import * as nsfwjs from "nsfwjs";
-import * as tf from "@tensorflow/tfjs";
+import React, { useState, useRef, useEffect } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { toast } from "sonner";
 import {
   Camera,
   X,
-  ShieldAlert,
   Loader2,
   CheckCircle2,
   Search,
-  Map as MapIcon
+  Map as MapIcon,
+  Navigation,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../api/axiosConfig";
 import "./CreatePostModal.css";
 
-// --- Interfaces ---
 interface ApiError {
   response?: { data?: { message?: string } };
   message: string;
-}
-
-interface NSFWPrediction {
-  className: "Hentai" | "Porn" | "Sexy" | "Drawing" | "Neutral";
-  probability: number;
-}
-
-interface NSFWModel {
-  classify: (img: HTMLImageElement | HTMLCanvasElement) => Promise<NSFWPrediction[]>;
 }
 
 interface CreatePostProps {
@@ -44,82 +32,40 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isUnsafe, setIsUnsafe] = useState(false);
-  const [model, setModel] = useState<NSFWModel | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const [errors, setErrors] = useState<{
+    title?: boolean;
+    caption?: boolean;
+    image?: boolean;
+  }>({});
+
   const [location, setLocation] = useState({ lat: 40.4167, lng: -3.7037 });
   const [isLocating, setIsLocating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showMiniMap, setShowMiniMap] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
   const miniMapContainer = useRef<HTMLDivElement>(null);
   const miniMap = useRef<maplibregl.Map | null>(null);
   const miniMarker = useRef<maplibregl.Marker | null>(null);
 
-  // 1. Analisis de Seguridad de Imagen (Frontend)
-  const analyzeImage = useCallback(async () => {
-    if (!model || !imgRef.current || imgRef.current.naturalWidth === 0) return;
-
-    setIsAnalyzing(true);
-    setIsUnsafe(false);
-    try {
-      const predictions = await model.classify(imgRef.current);
-      const highProbabilityTrigger = 0.65;
-      const detectedUnsafe = predictions.some(
-        (p: NSFWPrediction) =>
-          ["Porn", "Hentai", "Sexy"].includes(p.className) &&
-          p.probability > highProbabilityTrigger
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setIsLocating(false);
+        },
+        () => setIsLocating(false),
       );
-      if (detectedUnsafe) {
-        setIsUnsafe(true);
-        toast.error("Imagen no permitida", { description: "Se ha detectado contenido explícito." });
-      }
-    } catch (err) {
-      console.error("Error análisis imagen:", err);
-    } finally {
-      setIsAnalyzing(false);
     }
-  }, [model]);
-
-  // 2. Inicializacion Blindada
-  useEffect(() => {
-    const initModal = async () => {
-      try {
-        await tf.ready();
-        // Cargamos el modelo solo si no existe para evitar conflictos de backend
-        const loadedModel = await nsfwjs.load('MobileNetV2');
-        setModel(loadedModel as unknown as NSFWModel);
-      } catch {
-        console.warn("Fallo carga IA local, se usará validación de servidor.");
-      }
-
-      if ("geolocation" in navigator) {
-        setIsLocating(true);
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-            setIsLocating(false);
-          },
-          () => setIsLocating(false)
-        );
-      }
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
     };
-    initModal();
-  }, []);
+  }, [preview]);
 
-  // 3. Disparo de analisis al cargar imagen
-  useEffect(() => {
-    if (preview && model && imgRef.current) {
-      const handleLoad = () => analyzeImage();
-      const currentImg = imgRef.current;
-      currentImg.addEventListener("load", handleLoad);
-      return () => currentImg.removeEventListener("load", handleLoad);
-    }
-  }, [preview, model, analyzeImage]);
-
-  // 4. Logica de Mapa y Busqueda
   useEffect(() => {
     if (showMiniMap && miniMapContainer.current && !miniMap.current) {
       miniMap.current = new maplibregl.Map({
@@ -129,106 +75,147 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         zoom: 14,
         attributionControl: false,
       });
-      miniMarker.current = new maplibregl.Marker({ color: "#22c55e" }).setLngLat([location.lng, location.lat]).addTo(miniMap.current);
+
+      miniMarker.current = new maplibregl.Marker({ color: "#22c55e" })
+        .setLngLat([location.lng, location.lat])
+        .addTo(miniMap.current);
+
       miniMap.current.on("click", (e) => {
         const { lng, lat } = e.lngLat;
         setLocation({ lat, lng });
         miniMarker.current?.setLngLat([lng, lat]);
       });
     }
-    return () => { if (miniMap.current) { miniMap.current.remove(); miniMap.current = null; } };
-  }, [showMiniMap, location.lat, location.lng]);
-  const handleSearchLocation = async () => {
+    if (!showMiniMap && miniMap.current) {
+      miniMap.current.remove();
+      miniMap.current = null;
+    }
+  }, [location.lat, location.lng, showMiniMap]);
+
+  const handleSearchLocation = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!searchQuery) return;
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
-      const data = await res.json();
-      if (data?.[0]) {
-        const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`,
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const coords = {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
         setLocation(coords);
         miniMap.current?.flyTo({ center: [coords.lng, coords.lat], zoom: 15 });
         miniMarker.current?.setLngLat([coords.lng, coords.lat]);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error("Error buscando:", err);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        toast.error("Imagen demasiado pesada", {
+          description:
+            "El límite es de 3MB para permitir la validación por IA.",
+        });
+        return;
+      }
+
       if (preview) URL.revokeObjectURL(preview);
       setImage(file);
       setPreview(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, image: false })); // Limpiar error visual
     }
   };
 
-  // 5. ENVIO CON VALIDACION REAL
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const TOAST_ID = "post-process";
-
-    if (isUnsafe) {
-      toast.error("No puedes publicar", { description: "La imagen seleccionada no es segura." });
-      return;
-    }
+    const TOAST_ID = "post-upload";
 
     if (!title || !caption || !image) {
-      toast.warning("Campos incompletos", { description: "Por favor, rellena todo." });
+      toast.warning("Faltan datos", {
+        description: "Completa todos los campos obligatorios.",
+      });
       return;
     }
 
     try {
       setIsAnalyzing(true);
-      toast.loading("Validando contenido...", { id: TOAST_ID });
+      setErrors({}); 
+      toast.loading("Verificando seguridad y publicando...", { id: TOAST_ID });
 
-      // --- PASO 1: VALIDACION DE TEXTO (GEMINI/OPENAI BACKEND) ---
-      const validation = await api.post("/posts/validate-content", {
-        text: `${title}. ${caption}`
-      });
-
-      if (!validation.data.safe) {
-        toast.error("Contenido inapropiado", { 
-          id: TOAST_ID, 
-          description: "El texto infringe las normas de la comunidad." 
-        });
-        setIsAnalyzing(false);
-        return; 
-      }
-
-      // --- PASO 2: SUBIDA ---
-      toast.loading("Subiendo publicación...", { id: TOAST_ID });
       const formData = new FormData();
       formData.append("title", title.trim());
       formData.append("description", caption.trim());
       formData.append("user_id", String(user?.id));
       formData.append("lat", String(location.lat));
       formData.append("lng", String(location.lng));
+      formData.append("category", "general");
       formData.append("image", image);
 
       await api.post("/posts", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      toast.success("¡Publicado!", { id: TOAST_ID });
+      toast.success("¡Publicado con éxito!", { id: TOAST_ID });
       setIsSuccess(true);
-      setTimeout(() => { onSuccess(); onClose(); }, 2200);
-
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 2200);
     } catch (error) {
-      toast.dismiss(TOAST_ID);
       const err = error as ApiError;
-      toast.error("Error al publicar", { description: err.response?.data?.message || "Servidor fuera de línea" });
+      const rawMessage = err.response?.data?.message || "Error de conexión";
+
+      const newErrors: { title?: boolean; caption?: boolean; image?: boolean } =
+        {};
+      const lowerMsg = rawMessage.toLowerCase();
+
+      if (lowerMsg.includes("título")) newErrors.title = true;
+      if (lowerMsg.includes("descripción") || lowerMsg.includes("texto"))
+        newErrors.caption = true;
+      if (lowerMsg.includes("imagen") || lowerMsg.includes("foto"))
+        newErrors.image = true;
+
+      if (
+        lowerMsg.includes("todo") ||
+        lowerMsg.includes("contenido inapropiado")
+      ) {
+        newErrors.title = true;
+        newErrors.caption = true;
+        newErrors.image = true;
+      }
+
+      setErrors(newErrors);
+
+      const cleanDescription = rawMessage.includes("|")
+        ? rawMessage.split("|")[1].replace("DETAIL:", "").trim()
+        : rawMessage;
+
+      toast.error("Rechazado por Seguridad", {
+        id: TOAST_ID,
+        description: cleanDescription,
+      });
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  // --- RENDERIZADO ---
   if (isSuccess) {
     return (
       <div className="modal-overlay blur">
         <div className="success-container">
-          <CheckCircle2 size={80} className="check-icon-anim" />
-          <h2 className="success-title">¡LISTO!</h2>
-          <p className="success-text">Tu post se ha creado correctamente.</p>
+          <div className="check-wrapper">
+            <CheckCircle2 size={80} className="check-icon-anim" />
+          </div>
+          <h2 className="success-title">¡PUBLICADO!</h2>
+          <p className="success-text">
+            Tu descubrimiento ya es parte del mapa.
+          </p>
         </div>
       </div>
     );
@@ -239,50 +226,110 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       <div className="create-post-content">
         <div className="modal-header">
           <h3>NUEVA PUBLICACIÓN</h3>
-          <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          <button type="button" className="close-btn" onClick={onClose}>
+            <X size={20} />
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="create-post-form">
-          <div className="upload-section" onClick={() => fileInputRef.current?.click()}>
+          <div
+            className={`upload-section ${errors.image ? "input-error" : ""}`}
+            onClick={() => fileInputRef.current?.click()}
+          >
             {preview ? (
               <div className="preview-container">
-                <img src={preview} alt="Preview" ref={imgRef} className={isUnsafe ? "blur-unsafe" : ""} />
-                {isAnalyzing && <div className="analyzing-overlay"><Loader2 className="spin" /><span>REVISANDO...</span></div>}
+                <img src={preview} alt="Preview" />
+                {isAnalyzing && (
+                  <div className="analyzing-overlay">
+                    <Loader2 className="spin" size={24} />
+                    <span>MODERANDO...</span>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="upload-placeholder"><Camera size={40} /><p>AÑADIR FOTO</p></div>
+              <div className="upload-placeholder">
+                <Camera size={40} />
+                <p>AÑADIR FOTO</p>
+              </div>
             )}
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" hidden />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              hidden
+            />
           </div>
 
           <div className="location-picker-container">
+            <label>UBICACIÓN DEL EVENTO</label>
             <div className="location-search-field">
-              <Search size={16} />
-              <input type="text" placeholder="Lugar del evento..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()} />
-              <button type="button" onClick={() => setShowMiniMap(!showMiniMap)}><MapIcon size={16} /></button>
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Busca un lugar..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()}
+              />
+              <button
+                type="button"
+                className={`map-toggle-btn ${showMiniMap ? "active" : ""}`}
+                onClick={() => setShowMiniMap(!showMiniMap)}
+              >
+                <MapIcon size={16} />
+              </button>
             </div>
-            {showMiniMap && <div className="mini-map-wrapper"><div ref={miniMapContainer} className="mini-map-instance" /></div>}
+            {showMiniMap && (
+              <div className="mini-map-wrapper">
+                <div ref={miniMapContainer} className="mini-map-instance" />
+              </div>
+            )}
+            <div
+              className={`location-status-badge ${location.lat !== 40.4167 ? "ready" : "searching"}`}
+            >
+              <Navigation size={12} />
+              <span>{isLocating ? "Localizando..." : "Ubicación fijada"}</span>
+            </div>
           </div>
-
-          {isUnsafe && (
-            <div className="unsafe-warning">
-              <ShieldAlert size={20} />
-              <span>Imagen bloqueada por seguridad.</span>
-            </div>
-          )}
 
           <div className="form-group">
             <label>TÍTULO</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+            <input
+              className={errors.title ? "input-error" : ""}
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (errors.title)
+                  setErrors((prev) => ({ ...prev, title: false }));
+              }}
+              placeholder="Ej: Graffiti en Malasaña"
+              required
+            />
           </div>
 
           <div className="form-group">
             <label>DESCRIPCIÓN</label>
-            <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={3} required />
+            <textarea
+              className={errors.caption ? "input-error" : ""}
+              value={caption}
+              onChange={(e) => {
+                setCaption(e.target.value);
+                if (errors.caption)
+                  setErrors((prev) => ({ ...prev, caption: false }));
+              }}
+              placeholder="¿Qué lo hace especial?"
+              rows={3}
+              required
+            />
           </div>
 
-          <button type="submit" className="submit-post-btn" disabled={isUnsafe || isAnalyzing || isLocating}>
-            {isAnalyzing ? "PROCESANDO..." : "PUBLICAR"}
+          <button
+            type="submit"
+            className="submit-post-btn"
+            disabled={isAnalyzing || isLocating || !title || !caption}
+          >
+            {isAnalyzing ? "VERIFICANDO..." : "PUBLICAR"}
           </button>
         </form>
       </div>

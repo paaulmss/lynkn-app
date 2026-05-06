@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODAL DE PUBLICACIÓN
+   MODAL DE PUBLICACION
    ========================================================================== */
 .modal-overlay {
   position: fixed;
@@ -24,6 +24,14 @@
   max-height: 90vh;
   overflow-y: auto;
   animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.create-post-content::-webkit-scrollbar {
+  width: 6px;
+}
+.create-post-content::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 10px;
 }
 
 @keyframes modalSlideIn {
@@ -373,6 +381,27 @@
   object-fit: contain; 
   
   display: block;
+}
+
+/* ==========================================================================
+   VALIDACION Y ERRORES
+   ========================================================================== */
+.input-error {
+  border-color: #ff4444 !important; /* Rojo intenso */
+  box-shadow: 0 0 0 1px #ff4444;
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+.form-group:focus-within label.label-error,
+label.label-error {
+  color: #ff4444;
 }
 
 .spin { animation: spin 1s linear infinite; }

@@ -16,7 +16,6 @@ import {
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
-import { Express } from 'express';
 
 /**
  * Controlador para la gestion de publicaciones y eventos
@@ -26,32 +25,53 @@ export class PostsController {
   private readonly genAI: GoogleGenerativeAI;
   private readonly safetyModel: any;
 
-  constructor(private readonly postsService: PostsService) {
-    // Inicializamos Gemini con API KEY
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    // Usamos el modelo flash por su rapidez y bajo consumo
-    this.safetyModel = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  }
+ constructor(private readonly postsService: PostsService) {
+  this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+  
+  this.safetyModel = this.genAI.getGenerativeModel(
+    { model: "gemini-2.5-flash" },
+    { apiVersion: 'v1' } 
+  );
+}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))
-  async create(
-    @UploadedFile() file: any, 
-    @Body() body: any
-  ) {
-    // 1. Validamos el texto con Gemini antes de hacer nada
-    const validation = await this.validateContent({ 
-      text: `${body.title} ${body.description}` 
-    });
-    
-    // 2. Si la IA dice que no es seguro, lanzamos la excepcion
-    if (!validation.safe) {
-      throw new BadRequestException('Contenido inapropiado detectado por la IA.');
-    }
+  async create(@UploadedFile() file: any, @Body() body: any) {
+    try {
+      if (!file) throw new BadRequestException('La imagen es obligatoria');
 
-    // 3. Solo si es seguro, procedemos a crear el post
-    return this.postsService.createPost(file, body);
+      const prompt = `Actúa como moderador de contenido.
+      Analiza Título: "${body.title}", Descripción: "${body.description}" e Imagen.
+
+      REGLAS DE RESPUESTA:
+      1. Si es seguro, responde SOLO: "SAFE"
+      2. Si es inseguro, responde con este formato: 
+      REASON: [Escribe aquí si falla el Título, la Descripción, la Imagen o Todo] | DETAIL: [Breve explicación en español]`;
+
+      const imagePart = {
+        inlineData: { data: file.buffer.toString("base64"), mimeType: file.mimetype }
+      };
+
+      const result = await this.safetyModel.generateContent([prompt, imagePart]);
+      const response = result.response.text().toUpperCase().trim();
+
+      console.log("--- RESPUESTA DE GEMINI ---");
+      console.log(`"${response}"`); 
+      console.log("---------------------------");
+
+      if (response !== "SAFE") {
+        throw new BadRequestException('Contenido inapropiado detectado por la IA.');
+      }
+
+      return this.postsService.createPost(file, body);
+
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+
+      console.error("Fallo crítico seguridad:", (error as any).message);
+
+      throw new BadRequestException('No se pudo verificar la seguridad. Inténtalo de nuevo.');
+    }
   }
 
   /**
@@ -77,7 +97,7 @@ export class PostsController {
 
   @Patch('participation/:id')
   async updateStatus(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Body('status') status: 'accepted' | 'rejected'
   ) {
     return await this.postsService.updateParticipationStatus(parseInt(id), status);
@@ -125,24 +145,16 @@ export class PostsController {
   @Post('validate-content')
   async validateContent(@Body() data: { text: string }) {
     try {
-      const prompt = `Analiza el siguiente texto de una red social y determina si infringe normas de comunidad (odio, acoso, violencia o contenido sexual explícito). 
-      Responde UNICAMENTE con la palabra "SAFE" si es permitido o "UNSAFE" si debe ser bloqueado. 
-      Texto a analizar: "${data.text}"`;
-
+      const prompt = `Moderate this text: "${data.text}". Respond ONLY "SAFE" or "UNSAFE".`;
       const result = await this.safetyModel.generateContent(prompt);
-      const responseText = result.response.text().toUpperCase();
+      const response = result.response.text().toUpperCase().trim();
 
-      if (responseText.includes("UNSAFE")) {
-        return { 
-          safe: false, 
-          reasons: ["Contenido inapropiado detectado por filtros de seguridad"] 
-        };
+      if (response !== "SAFE") {
+        return { safe: false, reasons: ["Lenguaje inapropiado o peligroso detectado."] };
       }
-
       return { safe: true };
     } catch (error) {
-      console.error('Error con Gemini:', error);
-      return { safe: true }; 
+      return { safe: false, reasons: ["Error en el sistema de verificación."] };
     }
   }
 }
