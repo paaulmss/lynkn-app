@@ -12,6 +12,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Explore from "./pages/Explorer/Explore";
 import NotificationsPage from "./components/notifcations/NotificationsPage"; 
 import MessagesPage from "./pages/Messages/MessagesPage";
+import Settings from "./pages/Settings/Settings";
+import MyRequestsPage from "./pages/Requests/MyRequestsPage";
 
 function App() {
   return (
@@ -63,6 +65,26 @@ function App() {
             element={
               <ProtectedRoute>
                 <MessagesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* MIS SOLICITUDES */}
+          <Route
+            path="/requests"
+            element={
+              <ProtectedRoute>
+                <MyRequestsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* AJUSTES */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />

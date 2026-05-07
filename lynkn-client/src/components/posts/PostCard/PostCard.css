@@ -1,5 +1,7 @@
 /* Estructura principal de la tarjeta en cuadrícula */
 .grid-post-card {
+  display: flex;
+  flex-direction: column;
   position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 12px;
@@ -10,6 +12,7 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   outline: none;
+  z-index: 1;
 }
 
 /* Efectos de interacción (Hover) */
@@ -20,20 +23,19 @@
   border-color: #333;
 }
 
-/* Tratamiento de la imagen del post */
 .post-card-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: filter 0.3s ease;
   display: block;
+  z-index: 0;
 }
 
 .grid-post-card:hover .post-card-image {
   filter: brightness(0.6);
 }
 
-/* Capa de información superpuesta (Overlay) */
 .post-card-overlay {
   position: absolute;
   inset: 0;
@@ -56,7 +58,6 @@
   opacity: 1;
 }
 
-/* Indicadores de interacción (Likes y Comentarios) */
 .overlay-stats {
   display: flex;
   gap: 16px;
@@ -71,7 +72,6 @@
   font-size: 0.95rem;
 }
 
-/* Título de la publicación */
 .post-card-title {
   font-size: 0.8rem;
   font-weight: 600;
@@ -81,4 +81,95 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.unlimited-badge-mini {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 242, 255, 0.2);
+  backdrop-filter: blur(8px);
+  color: #00f2ff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  z-index: 2;
+  text-transform: uppercase;
+}
+
+.nomad-stat-value {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fff;
+}
+
+.grid-post-card.status-pending {
+  border-color: #71717a;
+  box-shadow: 0 4px 15px rgba(113, 113, 122, 0.2);
+}
+
+/* Estado Aceptado: Verde */
+.grid-post-card.status-accepted {
+  border-color: #22c55e;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+}
+
+/* Estado Rechazado: Rojo */
+.grid-post-card.status-rejected {
+  border-color: #ef4444;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+}
+
+.post-status-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  z-index: 3;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.post-status-badge.pending {
+  background: rgba(113, 113, 122, 0.3);
+  color: #a1a1aa;
+  border-color: rgba(113, 113, 122, 0.4);
+}
+
+.post-status-badge.accepted {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.post-status-badge.rejected {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.grid-post-card.status-pending .post-card-image,
+.grid-post-card.status-rejected .post-card-image {
+  filter: saturate(0.4) brightness(0.8);
+}
+
+.grid-post-card.status-accepted .post-card-image {
+  filter: saturate(1.2);
+}
+
+.grid-post-card.status-pending:hover .post-card-image,
+.grid-post-card.status-accepted:hover .post-card-image,
+.grid-post-card.status-rejected:hover .post-card-image {
+  filter: brightness(0.4);
 }

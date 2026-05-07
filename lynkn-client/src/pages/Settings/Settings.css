@@ -1,0 +1,199 @@
+/* ==========================================================================
+   CONTENEDOR PRINCIPAL Y LAYOUT
+   ========================================================================== */
+.main-content {
+  min-height: 100vh; 
+  overflow-y: auto; 
+  -webkit-overflow-scrolling: touch; 
+  overflow-x: hidden; 
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-page-main {
+  flex: 1;
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  background: #050505;
+}
+
+.settings-page-wrapper {
+  padding: 40px;
+  max-width: 900px;
+  margin: 0 auto;
+  margin-top: 60px;
+}
+
+/* ==========================================================================
+   CABECERA DE AJUSTES
+   ========================================================================== */
+.settings-header {
+  margin-bottom: 40px;
+}
+
+.settings-header h1 {
+  font-size: 1.5rem;
+  letter-spacing: 8px;
+  font-weight: 900;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.settings-header p {
+  color: #555;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   TARJETAS Y GRID
+   ========================================================================== */
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 100px; /* Espacio extra al final */
+}
+
+.settings-card {
+  background: #0a0a0a;
+  border: 1px solid #ffffff08;
+  border-radius: 20px;
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  color: #00f2ff;
+}
+
+.card-header span {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   ITEMS DE AJUSTES
+   ========================================================================== */
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-item.selectable {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.settings-item.selectable:hover {
+  opacity: 0.7;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-info span {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.item-info small {
+  color: #444;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   INPUTS, SELECTS Y CONTROLES
+   ========================================================================== */
+.settings-select {
+  background: #141414;
+  border: 1px solid #1f1f1f;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.settings-range {
+  width: 150px;
+  accent-color: #00f2ff;
+  cursor: pointer;
+}
+
+/* Badge de verificacion */
+.badge-verified {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   BOTON CERRAR SESION
+   ========================================================================== */
+.logout-full-btn {
+  margin-top: 20px;
+  background: transparent;
+  border: 1px solid #ff444433;
+  color: #ff4444;
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.8rem;
+}
+
+.logout-full-btn:hover {
+  background: #ff4444;
+  color: white;
+  box-shadow: 0 10px 20px rgba(255, 68, 68, 0.2);
+}
+
+/* ==========================================================================
+   RESPONSIVE / SIDEBAR ACTIVE
+   ========================================================================== */
+@media (max-width: 768px) {
+  .settings-page-wrapper {
+    padding: 20px;
+  }
+  
+  .settings-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .settings-select, .settings-range {
+    width: 100%;
+  }
+}

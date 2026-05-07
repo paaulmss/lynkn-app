@@ -4,15 +4,21 @@ import { chatService, type ServerMessage } from '../../services/chatService';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../api/supabaseClient'; 
 
-// Componentes
 import Sidebar from "../../components/Sidebar";
 import CreatePostModal from "../../components/posts/CreatePostModal";
-import { Menu, Search, Filter, Send, Lock } from "lucide-react";
+import { Menu, Search, Filter, Send, Lock, Loader2 } from "lucide-react";
 
 interface EventParticipation {
   id: number;
   title: string;
   isActive: boolean;
+  max_particip: number;
+}
+
+interface ParticipantData {
+  users: {
+    username: string;
+  } | null;
 }
 
 interface SupabaseResponse {
@@ -22,13 +28,16 @@ interface SupabaseResponse {
     title: string;
     is_chat_active: boolean;
     user_id: number;
+    max_particip: number;
   } | null;
 }
 
 const MessagesPage = () => {
   const { user, isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useAuth();
   const [activePostId, setActivePostId] = useState<number | null>(null);
-  const [messages, setMessages] = useState<ServerMessage[]>([]);
+  
+  const [messages, setMessages] = useState<(ServerMessage & { type?: string })[]>([]);
+  
   const [newMessage, setNewMessage] = useState('');
   const [myEvents, setMyEvents] = useState<EventParticipation[]>([]);
   const [activeParticipants, setActiveParticipants] = useState<string[]>([]);
@@ -36,30 +45,26 @@ const MessagesPage = () => {
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. AUTO-SCROLL
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // 2. CARGA DE EVENTOS
   useEffect(() => { 
     const fetchMyEvents = async () => {
       if (!user?.id) return;
       setIsLoadingEvents(true);
       
-      // Consulta A: Eventos donde soy participante aceptado
       const { data: participations, error: pError } = await supabase
         .from('participations')
-        .select(`post_id, posts ( id, title, is_chat_active, user_id )`)
+        .select(`post_id, posts ( id, title, is_chat_active, user_id, max_particip )`)
         .eq('user_id', user.id)
         .eq('status', 'accepted');
 
-      // Consulta B: Eventos que yo mismo he creado
       const { data: ownedPosts, error: oError } = await supabase
         .from('posts')
-        .select(`id, title, is_chat_active, user_id`)
+        .select(`id, title, is_chat_active, user_id, max_particip`)
         .eq('user_id', user.id);
 
       if (pError || oError) {
@@ -73,16 +78,17 @@ const MessagesPage = () => {
         .map(p => ({ 
           id: p.posts!.id, 
           title: p.posts!.title,
-          isActive: p.posts!.is_chat_active 
+          isActive: p.posts!.max_particip === 0 ? true : p.posts!.is_chat_active,
+          max_particip: p.posts!.max_particip
         }));
 
       const formattedOwned = (ownedPosts || []).map(p => ({
         id: p.id,
         title: p.title,
-        isActive: p.is_chat_active
+        isActive: p.max_particip === 0 ? true : p.is_chat_active,
+        max_particip: p.max_particip
       }));
 
-      // Combinar listas y eliminar duplicados por ID
       const combined = [...formattedParticipations, ...formattedOwned];
       const uniqueEvents = Array.from(new Map(combined.map(item => [item.id, item])).values());
 
@@ -93,79 +99,63 @@ const MessagesPage = () => {
     fetchMyEvents(); 
   }, [user]); 
 
-  // 3. CARGAR HISTORIAL Y PARTICIPANTES AL ACTIVAR CHAT
-useEffect(() => {
-  const loadChatData = async () => {
-    if (!activePostId) {
-      setMessages([]);
-      setActiveParticipants([]);
-      return;
-    }
+  useEffect(() => {
+    const loadChatData = async () => {
+      if (!activePostId) {
+        setMessages([]);
+        setActiveParticipants([]);
+        return;
+      }
 
-    // Cargar Mensajes
-    const { data: msgData } = await supabase
-      .from('messages')
-      .select('*, users(username, foto_perfil)')
-      .eq('post_id', activePostId)
-      .order('sent_at', { ascending: true });
-    
-    if (msgData) setMessages(msgData);
-
-    // Cargar Nombres de Participantes
-    const { data: partData } = await supabase
-      .from('participations')
-      .select(`users ( username )`)
-      .eq('post_id', activePostId)
-      .eq('status', 'accepted') as { data: { users: { username: string } | { username: string }[] | null }[] | null };
-
-    if (partData) {
-      const names = partData.map(p => {
-        if (Array.isArray(p.users)) {
-          return p.users[0]?.username;
-        }
-        return p.users?.username;
-      }).filter(Boolean) as string[];
+      const { data: msgData } = await supabase
+        .from('messages')
+        .select('*, users(username, foto_perfil)')
+        .eq('post_id', activePostId)
+        .order('sent_at', { ascending: true });
       
-      setActiveParticipants(names);
-    }
-  };
+      if (msgData) setMessages(msgData);
 
-  loadChatData();
-}, [activePostId]);
-  // 4. REALTIME: DESBLOQUEO AUTOMATICO
+      const { data: partData } = await supabase
+        .from('participations')
+        .select(`users ( username )`)
+        .eq('post_id', activePostId)
+        .eq('status', 'accepted') as unknown as { data: ParticipantData[] | null };
+
+      if (partData) {
+        const names = partData
+          .map((p) => p.users?.username)
+          .filter((name): name is string => Boolean(name));
+        setActiveParticipants(names);
+      }
+    };
+
+    loadChatData();
+  }, [activePostId]);
+
   useEffect(() => {
     const channel = supabase
       .channel('chat_unlock_updates')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'posts' },
-        (payload) => {
-          if (payload.new.is_chat_active) {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
+          if (payload.new.is_chat_active || payload.new.max_particip === 0) {
             setMyEvents(prev => prev.map(ev => 
               ev.id === payload.new.id ? { ...ev, isActive: true } : ev
             ));
           }
-        }
-      )
-      .subscribe();
-
+      }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // 5. WEBSOCKETS
   useEffect(() => {
     const currentEvent = myEvents.find(e => e.id === activePostId);
     if (!activePostId || !currentEvent?.isActive) return;
 
     chatService.connect();
     chatService.joinPostChat(activePostId);
-    
     chatService.onNewMessage((msg) => {
       if (msg.post_id === activePostId) {
         setMessages((prev) => [...prev, msg]);
       }
     });
-
     return () => {
       chatService.offNewMessage();
       chatService.disconnect();
@@ -175,7 +165,6 @@ useEffect(() => {
   const handleSelectEvent = (event: EventParticipation) => {
     if (!event.isActive) return;
     setActivePostId(event.id);
-    setMessages([]); 
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -216,15 +205,7 @@ useEffect(() => {
             </header>
             <div className="events-list">
               {isLoadingEvents ? (
-                [...Array(6)].map((_, i) => (
-                  <div key={i} className="skeleton-item">
-                    <div className="skeleton-avatar" />
-                    <div className="skeleton-info">
-                      <div className="skeleton-line short" />
-                      <div className="skeleton-line long" />
-                    </div>
-                  </div>
-                ))
+                <div className="loader-container"><Loader2 className="spin" /></div>
               ) : myEvents.length > 0 ? (
                 myEvents.map((event) => (
                   <div 
@@ -259,21 +240,27 @@ useEffect(() => {
                     <div className="chat-header-info">
                       <h3>{activeEvent?.title}</h3>
                       <span className="participant-names">
-                        {activeParticipants.length > 0 ? activeParticipants.join(", ") : "Cargando participantes..."}
+                        {activeParticipants.join(", ")}
                       </span>
                     </div>
                   </header>
                   
                   <div className="messages-list" ref={scrollRef}>
                     {messages.map((m) => (
-                      <div key={m.id} className={`message-wrapper ${Number(m.sender_id) === Number(user?.id) ? 'mine' : 'others'}`}>
-                        <div className="message-bubble">
-                          {Number(m.sender_id) !== Number(user?.id) && (
-                            <span className="sender-name">{m.users?.username}</span>
-                          )}
-                          <p>{m.content}</p>
+                      m.type === 'system' ? (
+                        <div key={m.id} className="system-msg-wrapper">
+                          <span className="system-msg-text">{m.content}</span>
                         </div>
-                      </div>
+                      ) : (
+                        <div key={m.id} className={`message-wrapper ${Number(m.sender_id) === Number(user?.id) ? 'mine' : 'others'}`}>
+                          <div className="message-bubble">
+                            {Number(m.sender_id) !== Number(user?.id) && (
+                              <span className="sender-name">{m.users?.username}</span>
+                            )}
+                            <p>{m.content}</p>
+                          </div>
+                        </div>
+                      )
                     ))}
                   </div>
 
@@ -292,7 +279,7 @@ useEffect(() => {
                 <div className="no-chat-selected">
                    <Lock size={64} className="lock-icon" style={{ opacity: 0.2, marginBottom: '20px' }} />
                    <h3>Chat restringido</h3>
-                   <p>El chat se abrirá automáticamente cuando se complete el cupo de participantes.</p>
+                   <p>Este chat se abrirá cuando se complete el cupo.</p>
                 </div>
               )
             ) : (

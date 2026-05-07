@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import maplibregl from "maplibre-gl";
 import {
   X,
@@ -30,6 +31,7 @@ interface PostData {
     username: string;
     foto_perfil: string;
   };
+  userStatus?: "available" | "pending" | "accepted" | "rejected";
 }
 
 interface PostDetailModalProps {
@@ -39,33 +41,34 @@ interface PostDetailModalProps {
 
 const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]);
-
-  const [joinStatus, setJoinStatus] = useState<
-    "idle" | "pending" | "accepted" | "rejected"
-  >("idle");
+  
+  const [joinStatus, setJoinStatus] = useState<"idle" | "pending" | "accepted" | "rejected">(
+  post.userStatus === "available" || !post.userStatus 
+    ? "idle" 
+    : (post.userStatus as "pending" | "accepted" | "rejected")
+);
   const [loadingJoin, setLoadingJoin] = useState(false);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  
   const isOwner = user?.id === post.user_id;
+  const isUnlimited = post.max_particip === 0;
+  const spotsLeft = isUnlimited ? null : (post.max_particip || 0) - (post.current_particip || 0);
 
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:4000/posts/${post.id}/participants`,
-        );
+        const response = await fetch(`http://localhost:4000/posts/${post.id}/participants`);
         const data: Participant[] = await response.json();
         setParticipants(data);
 
-        // Comprobamos si el usuario actual ya está en la lista
         const myRequest = data.find((p) => p.user_id === user?.id);
         if (myRequest) {
-          setJoinStatus(
-            myRequest.status as "pending" | "accepted" | "rejected",
-          );
+          setJoinStatus(myRequest.status as "pending" | "accepted" | "rejected");
         }
       } catch (error) {
         console.error("Error cargando participantes:", error);
@@ -97,35 +100,29 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
   }, [post]);
 
   const handleJoinRequest = async () => {
-  setLoadingJoin(true);
-  try {
-    const response = await fetch(
-      `http://localhost:4000/posts/${post.id}/join`,
-      {
+    setLoadingJoin(true);
+    try {
+      const response = await fetch(`http://localhost:4000/posts/${post.id}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           userId: user?.id,
           ownerId: post.user_id
         }),
+      });
+
+      if (response.ok) {
+        setJoinStatus(isUnlimited ? "accepted" : "pending");
       }
-    );
-
-    if (response.ok) {
-      setJoinStatus("pending");
+    } catch (err) {
+      console.error("Error al enviar la solicitud:", err);
+      alert("No se pudo enviar la solicitud");
+    } finally {
+      setLoadingJoin(false);
     }
-  } catch (err) {
-    console.error("Error al enviar la solicitud:", err);
-    alert("No se pudo enviar la solicitud");
-  } finally {
-    setLoadingJoin(false);
-  }
-};
+  };
 
-  const handleParticipantAction = async (
-    id: number,
-    status: "accepted" | "rejected",
-  ) => {
+  const handleParticipantAction = async (id: number, status: "accepted" | "rejected") => {
     try {
       await fetch(`http://localhost:4000/posts/participation/${id}`, {
         method: "PATCH",
@@ -133,7 +130,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
         body: JSON.stringify({ status }),
       });
       setParticipants((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status } : p)),
+        prev.map((p) => (p.id === id ? { ...p, status } : p))
       );
     } catch (error) {
       console.error("Error al actualizar:", error);
@@ -148,8 +145,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
         minute: "2-digit",
       })
     : "Fecha no definida";
-
-  const spotsLeft = (post.max_particip || 0) - (post.current_particip || 0);
 
   return (
     <div className="nomad-overlay" onClick={onClose}>
@@ -169,41 +164,41 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
           <div className="nomad-scroll-area">
             <div className="nomad-header">
               <img
-                src={
-                  post.users?.foto_perfil ||
-                  "https://api.dicebear.com/8.x/notionists/svg?seed=Pepe"
-                }
+                src={post.users?.foto_perfil || "https://api.dicebear.com/8.x/notionists/svg?seed=Pepe"}
                 className="nomad-avatar"
                 alt="Avatar"
               />
               <div className="nomad-creator-text">
-                <span className="nomad-username">
-                  @{post.users?.username || "usuario"}
-                </span>
+                <span className="nomad-username">@{post.users?.username || "usuario"}</span>
                 <span className="nomad-category">{post.category}</span>
               </div>
             </div>
 
             <h1 className="nomad-title">{post.title}</h1>
+            
             <div className="nomad-stats-grid">
               <div className="nomad-stat-box">
-                <span className="nomad-stat-value">{post.max_particip}</span>
-                <span className="nomad-stat-label">PLAZAS</span>
+                <span className="nomad-stat-value">
+                  {isUnlimited ? "∞" : post.max_particip}
+                </span>
+                <span className="nomad-stat-label">
+                  {isUnlimited ? "ILIMITADO" : "PLAZAS"}
+                </span>
               </div>
               <div className="nomad-stat-box">
-                <span className="nomad-stat-value">
-                  {post.current_particip || 0}
-                </span>
+                <span className="nomad-stat-value">{post.current_particip || 0}</span>
                 <span className="nomad-stat-label">UNIDOS</span>
               </div>
             </div>
+
             <p className="nomad-description">{post.description}</p>
+            
             <div className="nomad-meta-info">
               <div className="nomad-meta-item">
                 <Calendar size={16} /> <span>{eventDate}</span>
               </div>
               <div className="nomad-meta-item">
-                <MapPin size={16} /> <span>Ubicación exacta tras aceptar</span>
+                <MapPin size={16} /> <span>{isUnlimited || joinStatus === 'accepted' ? 'Ubicación activa' : 'Ubicación exacta tras aceptar'}</span>
               </div>
             </div>
 
@@ -225,12 +220,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
                 <div className="nomad-footer-status">
                   <span className="nomad-spots-left">MODO ORGANIZADOR</span>
                 </div>
-                <button
-                  className="nomad-btn-admin"
-                  onClick={() => setShowAdminPanel(!showAdminPanel)}
-                >
-                  <Users size={18} />{" "}
-                  {showAdminPanel ? "OCULTAR LISTA" : "GESTIONAR ASISTENTES"}
+                <button className="nomad-btn-admin" onClick={() => setShowAdminPanel(!showAdminPanel)}>
+                  <Users size={18} /> {showAdminPanel ? "OCULTAR LISTA" : "GESTIONAR ASISTENTES"}
                   <ChevronRight
                     size={18}
                     style={{
@@ -244,45 +235,48 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
               <div className="nomad-user-controls">
                 <div className="nomad-footer-status">
                   <span className="nomad-spots-left">
-                    {spotsLeft} plazas disponibles
+                    {isUnlimited ? "EVENTO DE ACCESO ILIMITADO" : `${spotsLeft} plazas disponibles`}
                   </span>
-                  <div className="nomad-bar-container">
-                    <div
-                      className="nomad-bar-fill"
-                      style={{
-                        width: `${Math.min(((post.current_particip || 0) / post.max_particip) * 100, 100)}%`,
-                      }}
-                    ></div>
-                  </div>
+                  
+                  {!isUnlimited && (
+                    <div className="nomad-bar-container">
+                      <div
+                        className="nomad-bar-fill"
+                        style={{
+                          width: `${Math.min(((post.current_particip || 0) / post.max_particip) * 100, 100)}%`,
+                        }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
 
-                <button
-                  className={`nomad-btn-join ${joinStatus}`}
-                  onClick={handleJoinRequest}
-                  disabled={
-                    joinStatus !== "idle" || spotsLeft <= 0 || loadingJoin
-                  }
-                >
-                  {joinStatus === "idle" &&
-                    (loadingJoin ? (
-                      "Enviando..."
-                    ) : (
-                      <>
-                        SOLICITAR UNIRSE <ChevronRight size={18} />
-                      </>
-                    ))}
-                  {joinStatus === "pending" && (
-                    <>
-                      <Clock size={18} /> SOLICITUD PENDIENTE
-                    </>
-                  )}
-                  {joinStatus === "accepted" && (
-                    <>
-                      <CheckCircle size={18} /> YA ESTÁS DENTRO
-                    </>
-                  )}
-                  {joinStatus === "rejected" && <>SOLICITUD RECHAZADA</>}
-                </button>
+                {joinStatus === "idle" ? (
+                  <button
+                    className="nomad-btn-join"
+                    onClick={handleJoinRequest}
+                    disabled={(!isUnlimited && spotsLeft! <= 0) || loadingJoin}
+                  >
+                    {loadingJoin ? "Enviando..." : <>SOLICITAR UNIRSE <ChevronRight size={18} /></>}
+                  </button>
+                ) : (
+                  <button 
+                    className={`nomad-btn-status-redirect ${joinStatus}`}
+                    onClick={() => {
+                      onClose();
+                      navigate('/requests');
+                    }}
+                  >
+                    <div className="status-label-content">
+                      {joinStatus === 'pending' && <Clock size={18} />}
+                      {joinStatus === 'accepted' && <CheckCircle size={18} />}
+                      {joinStatus === 'rejected' && <X size={18} />}
+                      <span>
+                        {joinStatus === 'accepted' ? 'INSCRITO - GESTIONAR' : joinStatus.toUpperCase()}
+                      </span>
+                    </div>
+                    <ChevronRight size={18} />
+                  </button>
+                )}
               </div>
             )}
           </div>

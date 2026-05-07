@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'; // Añadimos hooks
+import { useEffect, useState } from 'react';
 import { 
   User, 
   PlusSquare, 
@@ -7,7 +7,8 @@ import {
   X, 
   MessageCircle, 
   Bell, 
-  Settings 
+  Settings,
+  ClipboardList
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -71,6 +72,10 @@ const Sidebar = ({ isOpen, onClose, activePage, onNewPostClick }: SidebarProps) 
 
             <Link to="/messages" className={`sidebar-item ${activePage === 'messages' ? 'active' : ''}`} onClick={onClose}>
               <MessageCircle size={20} /> <span>Mensajes</span>
+            </Link>
+
+            <Link to="/requests" className={`sidebar-item ${activePage === 'requests' ? 'active' : ''}`} onClick={onClose}>
+              <ClipboardList size={20} /> <span>Mis solicitudes</span>
             </Link>
 
             <Link to="/notifications" className={`sidebar-item ${activePage === 'notifications' ? 'active' : ''}`} onClick={onClose}>

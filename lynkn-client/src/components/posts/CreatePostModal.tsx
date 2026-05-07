@@ -10,6 +10,7 @@ import {
   Search,
   Map as MapIcon,
   Navigation,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../api/axiosConfig";
@@ -33,6 +34,9 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const [isUnlimited, setIsUnlimited] = useState(true);
+  const [maxParticipants, setMaxParticipants] = useState<number | "">("");
 
   const [errors, setErrors] = useState<{
     title?: boolean;
@@ -128,13 +132,21 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       if (preview) URL.revokeObjectURL(preview);
       setImage(file);
       setPreview(URL.createObjectURL(file));
-      setErrors((prev) => ({ ...prev, image: false })); // Limpiar error visual
+      setErrors((prev) => ({ ...prev, image: false }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const TOAST_ID = "post-upload";
+
+    if (!isUnlimited && (!maxParticipants || maxParticipants <= 0)) {
+      toast.warning("Define el aforo", {
+        description:
+          "Si no es ilimitado, debes indicar al menos 1 participante.",
+      });
+      return;
+    }
 
     if (!title || !caption || !image) {
       toast.warning("Faltan datos", {
@@ -145,7 +157,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
 
     try {
       setIsAnalyzing(true);
-      setErrors({}); 
+      setErrors({});
       toast.loading("Verificando seguridad y publicando...", { id: TOAST_ID });
 
       const formData = new FormData();
@@ -156,6 +168,8 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       formData.append("lng", String(location.lng));
       formData.append("category", "general");
       formData.append("image", image);
+      const finalParticipants = isUnlimited ? 0 : maxParticipants;
+      formData.append("max_participants", String(finalParticipants));
 
       await api.post("/posts", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -290,6 +304,41 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
             >
               <Navigation size={12} />
               <span>{isLocating ? "Localizando..." : "Ubicación fijada"}</span>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <div className="flex-label-header">
+              <label>PARTICIPANTES</label>
+              <label className="checkbox-container">
+                <input
+                  type="checkbox"
+                  checked={isUnlimited}
+                  onChange={(e) => {
+                    setIsUnlimited(e.target.checked);
+                    if (e.target.checked) setMaxParticipants(""); // Limpiamos si marca ilimitado
+                  }}
+                />
+                <span className="checkbox-label">ILIMITADO</span>
+              </label>
+            </div>
+
+            <div
+              className={`input-with-icon ${isUnlimited ? "disabled-field" : ""}`}
+            >
+              <Users size={16} className="field-icon" />
+              <input
+                type="number"
+                min="1"
+                placeholder={isUnlimited ? "Sin límite" : "Ej: 20"}
+                value={maxParticipants}
+                disabled={isUnlimited}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val !== "" && parseInt(val) <= 0) return;
+                  setMaxParticipants(val === "" ? "" : parseInt(val));
+                }}
+              />
             </div>
           </div>
 

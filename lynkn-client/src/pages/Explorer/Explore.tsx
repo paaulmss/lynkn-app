@@ -26,6 +26,13 @@ interface Post {
     username: string;
     foto_perfil: string;
   };
+  userStatus?: "available" | "pending" | "accepted" | "rejected";
+}
+
+interface UserRequest {
+  id: number;
+  post_id: number;
+  status: "pending" | "accepted" | "rejected";
 }
 
 interface UserData {
@@ -83,22 +90,44 @@ const Explore = () => {
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPostsAndStatus = useCallback(async () => {
+    if (!user?.id) return;
+
     try {
-      const response = await api.get("/posts");
-      setPosts(response.data);
+      const [postsRes, requestsRes] = await Promise.all([
+        api.get<Post[]>("/posts"),
+        api.get<UserRequest[]>(`/posts/user-requests/${user.id}`),
+      ]);
+
+      const enrichedPosts = postsRes.data.map((post) => {
+        const myRequest = requestsRes.data.find((r) => r.post_id === post.id);
+        return {
+          ...post,
+          userStatus: myRequest ? myRequest.status : ("available" as const),
+        };
+      });
+
+      setPosts(enrichedPosts);
     } catch (error) {
-      console.error("Error al cargar los posts:", error);
+      console.error("Error al cargar datos enriquecidos:", error);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    const initExplore = async () => {
-      await fetchPosts();
-    };
+  let isMounted = true;
 
-    initExplore();
-  }, [fetchPosts]);
+  const loadInitialData = async () => {
+    if (user?.id && isMounted) {
+      await fetchPostsAndStatus();
+    }
+  };
+
+  loadInitialData();
+
+  return () => {
+    isMounted = false;
+  };
+}, [fetchPostsAndStatus, user?.id]);
 
   useEffect(() => {
     if (viewMode !== "map" || !mapContainer.current) return;
@@ -133,7 +162,8 @@ const Explore = () => {
 
     posts.forEach((post) => {
       const el = document.createElement("div");
-      el.className = "post-marker-neon";
+      el.className = `post-marker-neon status-${post.userStatus}`;
+
       if (post.image_url) el.style.backgroundImage = `url(${post.image_url})`;
 
       const marker = new maplibregl.Marker(el)
@@ -142,10 +172,10 @@ const Explore = () => {
           new maplibregl.Popup({ offset: 25, className: "custom-popup-dark" })
             .setHTML(`
             <div class="popup-card-explore">
-              <img src="${post.image_url}" />
+              <img src="${post.image_url}" alt="${post.title}" />
               <div class="popup-body-explore">
                 <strong>${post.title}</strong>
-                <span>@${post.users?.username}</span>
+                <span class="status-label-${post.userStatus}">${post.userStatus === "available" ? "" : post.userStatus?.toUpperCase()}</span>
                 <button class="popup-view-btn" id="btn-${post.id}">VER DETALLES</button>
               </div>
             </div>
@@ -154,11 +184,8 @@ const Explore = () => {
         .addTo(map.current!);
 
       marker.getPopup().on("open", () => {
-        document
-          .getElementById(`btn-${post.id}`)
-          ?.addEventListener("click", () => {
-            setSelectedPost(post);
-          });
+        const btn = document.getElementById(`btn-${post.id}`);
+        btn?.addEventListener("click", () => setSelectedPost(post));
       });
 
       markers.current.push(marker);
@@ -169,11 +196,6 @@ const Explore = () => {
     const timer = setTimeout(() => map.current?.resize(), 300);
     return () => clearTimeout(timer);
   }, [isSidebarOpen]);
-
-  const handlePostSuccess = () => {
-    setIsCreatePostOpen(false);
-    fetchPosts();
-  };
 
   const isLocked = user?.role !== "admin" && user?.status_verif !== "approved";
 
@@ -186,7 +208,9 @@ const Explore = () => {
         onNewPostClick={() => setIsCreatePostOpen(true)}
       />
 
-      <main className={`main-content explore-view ${isSidebarOpen ? "sidebar-active" : ""}`}>
+      <main
+        className={`main-content explore-view ${isSidebarOpen ? "sidebar-active" : ""}`}
+      >
         <header className="top-navbar">
           <button
             className="icon-btn menu-trigger"
@@ -251,7 +275,7 @@ const Explore = () => {
       {isCreatePostOpen && (
         <CreatePostModal
           onClose={() => setIsCreatePostOpen(false)}
-          onSuccess={handlePostSuccess}
+          onSuccess={fetchPostsAndStatus}
         />
       )}
     </div>

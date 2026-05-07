@@ -255,6 +255,17 @@
   animation: rotate 1s linear infinite;
 }
 
+/* Bordes de los marcadores segun estado */
+.post-marker-neon.status-available { border: 2px solid #fff; box-shadow: 0 0 10px #fff; }
+.post-marker-neon.status-pending { border: 2px solid #71717a; box-shadow: 0 0 10px #71717a; }
+.post-marker-neon.status-accepted { border: 2px solid #22c55e; box-shadow: 0 0 10px #22c55e; }
+.post-marker-neon.status-rejected { border: 2px solid #ef4444; box-shadow: 0 0 10px #ef4444; }
+
+/* Labels de estado en el popup */
+.status-label-pending { color: #71717a; font-size: 0.7rem; font-weight: bold; }
+.status-label-accepted { color: #22c55e; font-size: 0.7rem; font-weight: bold; }
+.status-label-rejected { color: #ef4444; font-size: 0.7rem; font-weight: bold; }
+
 @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* RESPONSIVE */
