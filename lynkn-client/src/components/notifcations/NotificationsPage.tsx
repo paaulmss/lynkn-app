@@ -32,43 +32,44 @@ const NotificationsPage = () => {
    * 1. MARCAR COMO LEÍDAS
    * Al entrar en la página, notificamos al servidor que el usuario ha visto los avisos.
    */
-  const markAllAsRead = useCallback(async () => {
-    try {
-      if (!user?.id) return;
-      await fetch(
-        `http://localhost:4000/notifications/user/${user.id}/mark-read`,
-        { method: "PATCH" }
-      );
-    } catch (err) {
-      console.error("Error al marcar como leídas:", err);
-    }
-  }, [user?.id]);
+ const markAllAsRead = useCallback(async () => {
+  try {
+    if (!user?.id) return;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+    await fetch(
+      `${apiUrl}/notifications/user/${user.id}/mark-read`,
+      { method: "PATCH" }
+    );
+  } catch (err) {
+    console.error("Error al marcar como leídas:", err);
+  }
+}, [user?.id]);
 
   /**
    * 2. CARGAR NOTIFICACIONES
    * Trae el historial de notificaciones. 
    */
   const fetchNotifications = useCallback(async () => {
-    try {
-      if (!user?.id) return;
+  try {
+    if (!user?.id) return;
 
-      const response = await fetch(
-        `http://localhost:4000/notifications/user/${user.id}`
-      );
-      const data = await response.json();
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+    const response = await fetch(
+      `${apiUrl}/notifications/user/${user.id}`
+    );
+    const data = await response.json();
 
-      setNotifications(data || []);
+    setNotifications(data || []);
 
-      // Si hay datos, marcamos como leídos en la base de datos
-      if (data && data.length > 0) {
-        markAllAsRead();
-      }
-    } catch (error) {
-      console.error("Error cargando notificaciones:", error);
-    } finally {
-      setLoading(false);
+    if (data && data.length > 0) {
+      markAllAsRead();
     }
-  }, [user?.id]); 
+  } catch (error) {
+    console.error("Error cargando notificaciones:", error);
+  } finally {
+    setLoading(false);
+  }
+}, [user?.id, markAllAsRead]);
 
   /**
    * EFECTO DE ARRANQUE
