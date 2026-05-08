@@ -19,8 +19,9 @@ interface Post {
   lat: number;
   lng: number;
   category: string;
-  user_id: string;
+  user_id: number;
   max_particip?: number;
+  current_particip?: number;
   event_date?: string;
   users: {
     username: string;
@@ -91,12 +92,13 @@ const Explore = () => {
   const markers = useRef<maplibregl.Marker[]>([]);
 
   const fetchPostsAndStatus = useCallback(async () => {
-    if (!user?.id) return;
+    const currentUserId = user?.id;
+    if (!currentUserId) return;
 
     try {
       const [postsRes, requestsRes] = await Promise.all([
-        api.get<Post[]>("/posts"),
-        api.get<UserRequest[]>(`/posts/user-requests/${user.id}`),
+        api.get<Post[]>(`/posts?exclude=${currentUserId}`),
+        api.get<UserRequest[]>(`/posts/user-requests/${currentUserId}`),
       ]);
 
       const enrichedPosts = postsRes.data.map((post) => {
@@ -114,20 +116,21 @@ const Explore = () => {
   }, [user]);
 
   useEffect(() => {
-  let isMounted = true;
+    let isMounted = true;
 
-  const loadInitialData = async () => {
-    if (user?.id && isMounted) {
-      await fetchPostsAndStatus();
+    if (user?.id) {
+      const load = async () => {
+        if (isMounted) {
+          await fetchPostsAndStatus();
+        }
+      };
+      load();
     }
-  };
 
-  loadInitialData();
-
-  return () => {
-    isMounted = false;
-  };
-}, [fetchPostsAndStatus, user?.id]);
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchPostsAndStatus, user?.id]);
 
   useEffect(() => {
     if (viewMode !== "map" || !mapContainer.current) return;
@@ -208,9 +211,7 @@ const Explore = () => {
         onNewPostClick={() => setIsCreatePostOpen(true)}
       />
 
-      <main
-        className={`main-content explore-view ${isSidebarOpen ? "sidebar-active" : ""}`}
-      >
+      <main className={`main-content explore-view ${isSidebarOpen ? "sidebar-active" : ""}`}>
         <header className="top-navbar">
           <button
             className="icon-btn menu-trigger"
@@ -264,7 +265,7 @@ const Explore = () => {
         <PostDetailModal
           post={{
             ...selectedPost,
-            user_id: Number(selectedPost.user_id),
+            user_id: selectedPost.user_id,
             event_date: selectedPost.event_date || "",
             max_particip: selectedPost.max_particip || 0,
           }}

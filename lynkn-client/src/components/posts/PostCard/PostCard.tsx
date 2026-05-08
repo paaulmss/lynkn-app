@@ -1,9 +1,11 @@
 import React from "react";
 import { Heart, MessageCircle, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth"; 
 import "./PostCard.css";
 
 interface Post {
   id: number | string;
+  user_id: number; 
   title: string;
   image_url?: string;
   likes?: number;
@@ -19,11 +21,17 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post, onClick }) => {
+  const { user } = useAuth();
   const placeholderImg = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&auto=format&fit=crop';
   const finalSrc = post.image_url || placeholderImg;
   
   const isUnlimited = post.max_particip === 0 || !post.max_particip;
+  const isOwner = user?.id === post.user_id;
   
+  const current = Math.floor(post.current_particip || 0);
+  const max = Math.floor(post.max_particip || 1);
+  const percentage = isUnlimited ? 0 : Math.min(100, Math.floor((current / max) * 100));
+
   const renderStatusIcon = () => {
     switch (post.userStatus) {
       case "pending": return <Clock size={14} />;
@@ -47,31 +55,47 @@ const PostCard: React.FC<PostCardProps> = ({ post, onClick }) => {
         />
       </div>
       
-      {post.userStatus && post.userStatus !== "available" && (
+      {post.userStatus && post.userStatus !== "available" && !isOwner && (
         <div className={`post-status-badge ${post.userStatus}`}>
           {renderStatusIcon()}
           <span>{post.userStatus.toUpperCase()}</span>
         </div>
       )}
 
-      {isUnlimited && (!post.userStatus || post.userStatus === "available") && (
+      {isUnlimited && (!post.userStatus || post.userStatus === "available") && !isOwner && (
         <div className="unlimited-badge-mini">ILIMITADO</div>
       )}
 
       <div className="post-card-overlay">
         <div className="overlay-stats">
-          <div className="stat-item">
-            <Heart size={16} fill="white" color="white" /> 
-            <span>{post.likes || 0}</span>
-          </div>
-          <div className="stat-item">
-            <MessageCircle size={16} fill="white" color="white" /> 
-            <span>{post.comments || 0}</span>
+          <div className="stat-group">
+            <div className="stat-item">
+              <Heart size={14} fill="white" color="white" /> 
+              <span>{post.likes || 0}</span>
+            </div>
+            <div className="stat-item">
+              <MessageCircle size={14} fill="white" color="white" /> 
+              <span>{post.comments || 0}</span>
+            </div>
           </div>
           
-          <span className="stats-plazas">
-            {isUnlimited ? "Ilimitado" : `${post.current_particip || 0}/${post.max_particip}`}
-          </span>
+          {!isUnlimited && (
+            <div className="card-progress-wrapper">
+              <div className="progress-text">
+                <span className="current-count">{current}/{max}</span>
+                <span className="percentage-val">{percentage}%</span>
+              </div>
+              <div className="progress-bar-bg">
+                <div 
+                  className="progress-bar-fill" 
+                  style={{ 
+                    width: `${percentage}%`,
+                    backgroundColor: percentage > 90 ? '#ef4444' : percentage > 60 ? '#f59e0b' : '#00f2ff'
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         <span className="post-card-title">{post.title}</span>
       </div>

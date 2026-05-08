@@ -105,13 +105,6 @@
   color: #ffffff;
 }
 
-.nomad-category {
-  font-size: 0.65rem;
-  color: #00ffff;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 800;
-}
 
 .nomad-title {
   font-size: 2.2rem;
@@ -430,4 +423,41 @@
   .nomad-footer {
     padding: 24px;
   }
+
+  .title-stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.circular-progress-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle-bg {
+  fill: none;
+  stroke: #1a1a1a;
+  stroke-width: 6;
+}
+
+.circle-progress {
+  fill: none;
+  stroke: #00f2ff;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.percentage-display {
+  position: absolute;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+}
 }

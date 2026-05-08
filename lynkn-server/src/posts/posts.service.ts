@@ -1,10 +1,10 @@
 import { Express } from "express";
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { SupabaseService } from "../supabase.service";
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseService) { }
 
   public get supabase() {
     return this.supabaseService.getClient();
@@ -31,10 +31,12 @@ export class PostsService {
 
   async createPost(file: Express.Multer.File, body: any) {
     let imageUrl: string | null = null;
+
     if (file) {
       const fileExt = file.originalname.split(".").pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `posts/${fileName}`;
+
       const { error: uploadError } = await this.supabase.storage
         .from("post_images")
         .upload(filePath, file.buffer, {
@@ -42,17 +44,20 @@ export class PostsService {
           upsert: true,
         });
 
-      if (uploadError)
+      if (uploadError) {
         throw new InternalServerErrorException(
-          `Fallo en la carga: ${uploadError.message}`,
+          `Fallo en la carga de imagen: ${uploadError.message}`,
         );
+      }
+
       const { data } = this.supabase.storage
         .from("post_images")
         .getPublicUrl(filePath);
+
       imageUrl = data.publicUrl;
     }
 
-    const { data: post, error: dbError } = await this.supabase
+    const { data: postArray, error: dbError } = await this.supabase
       .from("posts")
       .insert([
         {
@@ -62,9 +67,8 @@ export class PostsService {
           user_id: parseInt(body.user_id),
           lat: parseFloat(body.lat) || 40.4167,
           lng: parseFloat(body.lng) || -3.7037,
-          max_particip: body.max_participants
-            ? parseInt(body.max_participants)
-            : 0,
+          max_particip: body.max_participants ? parseInt(body.max_participants) : 0,
+          current_particip: 0,
           category: body.category || "general",
           event_date: body.event_date || new Date().toISOString(),
           status: "active",
@@ -72,18 +76,42 @@ export class PostsService {
           moderation_status: "approved",
         },
       ])
-      .select();
+      .select()
+      .single();
 
     if (dbError) throw new InternalServerErrorException(dbError.message);
-    return post;
+
+    if (postArray) {
+      const { error: partError } = await this.supabase
+        .from("participations")
+        .insert([
+          {
+            post_id: postArray.id,
+            user_id: postArray.user_id,
+            status: "accepted",
+          },
+        ]);
+
+      if (partError) {
+        console.error("Error al auto-unir al creador:", partError.message);
+      }
+    }
+
+    return postArray;
   }
 
-  async findAll() {
-    const { data, error } = await this.supabase
+  async findAll(excludeUserId?: number) {
+    let query = this.supabase
       .from("posts")
       .select("*, users (username, foto_perfil)")
-      .eq("is_visible", true)
-      .order("id", { ascending: false });
+      .eq("is_visible", true);
+
+    if (excludeUserId) {
+      query = query.neq("user_id", excludeUserId);
+    }
+
+    const { data, error } = await query.order("id", { ascending: false });
+
     if (error) throw new InternalServerErrorException(error.message);
     return data || [];
   }
@@ -175,64 +203,64 @@ export class PostsService {
     return participation;
   }
 
-async deleteParticipation(id: number) {
-  const { data, error: fetchError } = await this.supabase
-    .from('participations')
-    .select(`
+  async deleteParticipation(id: number) {
+    const { data, error: fetchError } = await this.supabase
+      .from('participations')
+      .select(`
       post_id, 
       status, 
       user_id, 
       users(username), 
       posts(user_id, title)
     `)
-    .eq('id', id)
-    .single();
+      .eq('id', id)
+      .single();
 
-  if (fetchError || !data) throw new InternalServerErrorException('No se encontró la participación');
+    if (fetchError || !data) throw new InternalServerErrorException('No se encontró la participación');
 
-  const part = data as any; 
-  const username = part.users?.username;
-  const ownerId = part.posts?.user_id;
-  const postTitle = part.posts?.title;
+    const part = data as any;
+    const username = part.users?.username;
+    const ownerId = part.posts?.user_id;
+    const postTitle = part.posts?.title;
 
-  if (part.status === 'accepted') {
-    await this.supabase.rpc('decrement_participant', { row_id: part.post_id });
+    if (part.status === 'accepted') {
+      await this.supabase.rpc('decrement_participant', { row_id: part.post_id });
 
-    await this.supabase
-      .from('messages')
-      .insert([{
-        post_id: part.post_id,
-        sender_id: part.user_id,
-        content: `${username} ha salido del grupo`,
-        type: 'system' 
-      }]);
+      await this.supabase
+        .from('messages')
+        .insert([{
+          post_id: part.post_id,
+          sender_id: part.user_id,
+          content: `${username} ha salido del grupo`,
+          type: 'system'
+        }]);
 
-    if (ownerId) {
-      await this.createNotification(
-        ownerId, 
-        part.user_id, 
-        part.post_id, 
-        'member_left'
-      );
+      if (ownerId) {
+        await this.createNotification(
+          ownerId,
+          part.user_id,
+          part.post_id,
+          'member_left'
+        );
+      }
     }
+
+    await this.createNotification(
+      part.user_id,
+      ownerId || 0,
+      part.post_id,
+      'leave_confirm'
+    );
+
+    const { error: deleteError } = await this.supabase
+      .from('participations')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) throw new InternalServerErrorException(deleteError.message);
+
+    return { success: true };
   }
-
-  await this.createNotification(
-    part.user_id,
-    ownerId || 0,
-    part.post_id,
-    'leave_confirm'
-  );
-
-  const { error: deleteError } = await this.supabase
-    .from('participations')
-    .delete()
-    .eq('id', id);
-
-  if (deleteError) throw new InternalServerErrorException(deleteError.message);
-  
-  return { success: true };
-}
 
   async getParticipants(postId: number) {
     const { data, error } = await this.supabase
@@ -243,41 +271,175 @@ async deleteParticipation(id: number) {
     return data;
   }
 
-  async updateParticipationStatus(
-    participationId: number,
-    status: "accepted" | "rejected",
-  ) {
-    const { data: part, error } = await this.supabase
+  async updateParticipationStatus(participationId: number, status: "accepted" | "rejected") {
+  try {
+    const { data: currentPart, error: currentError } = await this.supabase
+      .from("participations")
+      .select("status, post_id, user_id, users(username)")
+      .eq("id", participationId)
+      .single();
+
+    if (currentError || !currentPart) throw new InternalServerErrorException("No se encontró la participación");
+
+    if (status === "accepted") {
+      const { data: postInfo } = await this.supabase
+        .from("posts")
+        .select("max_particip, current_particip")
+        .eq("id", currentPart.post_id)
+        .single();
+
+      const isUnlimited = postInfo.max_particip === 0;
+      if (!isUnlimited && postInfo.current_particip >= postInfo.max_particip) {
+        throw new BadRequestException("El evento ya ha alcanzado el límite de participantes");
+      }
+    }
+
+    const { data: updatedPart, error: updateError } = await this.supabase
       .from("participations")
       .update({ status })
       .eq("id", participationId)
       .select("*, posts(user_id, title)")
       .single();
 
-    if (error) throw new InternalServerErrorException(error.message);
+    if (updateError) throw new InternalServerErrorException(updateError.message);
 
-    if (part) {
+    const userArray = currentPart.users as unknown as { username: string }[];
+    const participantUsername = Array.isArray(userArray) ? userArray[0]?.username : (userArray as any)?.username;
+
+    if (updatedPart) {
+      // CASO A: ACEPTAR A ALGUIEN NUEVO
+      if (status === "accepted") {
+        await this.supabase.rpc("increment_participant", { row_id: updatedPart.post_id });
+
+        await this.supabase.from("messages").insert([{
+          post_id: updatedPart.post_id,
+          sender_id: updatedPart.posts.user_id,
+          content: `${participantUsername} se ha unido al grupo`,
+          type: "system"
+        }]);
+      }
+
+      // CASO B: EXPULSAR / RECHAZAR A ALGUIEN QUE YA ESTABA DENTRO
+      if (currentPart.status === "accepted" && status === "rejected") {
+        // RECALCULO: Liberar plaza en la DB para que otro pueda entrar
+        await this.supabase.rpc("decrement_participant", { row_id: updatedPart.post_id });
+
+        // Chat: Mensaje de sistema informativo para los que siguen dentro
+        await this.supabase.from("messages").insert([{
+          post_id: updatedPart.post_id,
+          sender_id: updatedPart.posts.user_id,
+          content: `${participantUsername} ha sido eliminado del evento por el organizador`,
+          type: "system"
+        }]);
+
+        // NOTIFICACIÓN: Aviso de expulsión al usuario
+        await this.createNotification(
+          updatedPart.user_id,
+          updatedPart.posts.user_id,
+          updatedPart.post_id,
+          'kicked'
+        );
+      }
+
+      // Limpiar notificaciones de solicitud antiguas
       await this.supabase
         .from("notifications")
         .delete()
-        .eq("user_id", part.posts.user_id)
-        .eq("post_id", part.post_id)
-        .eq("sender_id", part.user_id)
+        .eq("user_id", updatedPart.posts.user_id)
+        .eq("post_id", updatedPart.post_id)
+        .eq("sender_id", updatedPart.user_id)
         .eq("type", "join_request");
-
-      await this.createNotification(
-        part.user_id,
-        part.posts.user_id,
-        part.post_id,
-        status,
-      );
-
-      if (status === "accepted") {
-        await this.supabase.rpc("increment_participant", {
-          row_id: part.post_id,
-        });
-      }
     }
-    return part;
+
+    return updatedPart;
+  } catch (error) {
+    console.error("Error en updateParticipationStatus:", error);
+    if (error instanceof BadRequestException) throw error;
+    throw new InternalServerErrorException("No se pudo procesar el cambio de estado");
+  }
+}
+
+  async deletePost(postId: number, userId: number) {
+    const { data: participants, error: fetchError } = await this.supabase
+      .from('participations')
+      .select('user_id')
+      .eq('post_id', postId)
+      .neq('user_id', userId);
+
+    if (fetchError) throw new InternalServerErrorException("Error al obtener participantes");
+
+    // 2. Si hay gente, les enviamos la notificación de "Evento Cancelado"
+    if (participants && participants.length > 0) {
+      //Obtenemos el título antes de que muera el post
+      const { data: postData } = await this.supabase
+        .from('posts')
+        .select('title')
+        .eq('id', postId)
+        .single();
+
+      const notifications = participants.map(p => ({
+        user_id: p.user_id,
+        sender_id: userId,
+        post_id: null,
+        type: 'post_deleted',
+        is_read: false,
+        created_at: new Date().toISOString()
+      }));
+
+      await this.supabase.from('notifications').insert(notifications);
+    }
+
+    // 3. Borramos el post físicamente
+    const { error: deleteError } = await this.supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId)
+      .eq('user_id', userId); // Seguridad: solo el dueño puede borrarlo
+
+    if (deleteError) throw new InternalServerErrorException(deleteError.message);
+
+    return { success: true };
+  }
+
+  async kickParticipant(participationId: number, ownerId: number) {
+    // 1. Obtener datos del participante antes de nada
+    const { data: part, error: fetchError } = await this.supabase
+      .from('participations')
+      .select('*, users(username), posts(title)')
+      .eq('id', participationId)
+      .single();
+
+    if (fetchError || !part) throw new Error("No se encontró la participación");
+
+    // 2. Cambiar estado a 'rejected'
+    const { error: updateError } = await this.supabase
+      .from('participations')
+      .update({ status: 'rejected' })
+      .eq('id', participationId);
+
+    if (updateError) throw new Error("Error al expulsar");
+
+    // 3. Si estaba aceptado, liberamos el hueco en el post
+    if (part.status === 'accepted') {
+      await this.supabase.rpc('decrement_participant', { row_id: part.post_id });
+
+      // 4. Mensaje de sistema en el CHAT para todos
+      await this.supabase.from('messages').insert([{
+        post_id: part.post_id,
+        sender_id: ownerId,
+        content: `${part.users.username} ha sido expulsado del evento por el organizador.`,
+        type: 'system'
+      }]);
+    }
+
+    // 5. Notificación privada al usuario expulsado
+    await this.createNotification(
+      part.user_id,
+      ownerId,
+      part.post_id,
+      'kicked' // Crearemos este tipo en el frontend
+    );
+
+    return { success: true };
   }
 }
