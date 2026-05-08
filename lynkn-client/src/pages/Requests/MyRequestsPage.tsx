@@ -9,7 +9,7 @@ import {
   Menu,
   ClipboardList
 } from "lucide-react";
-import Sidebar from "../../components/Sidebar"; // Ajustada ruta común
+import Sidebar from "../../components/Sidebar";
 import { useAuth } from "../../hooks/useAuth";
 import "./MyRequestsPage.css";
 
@@ -30,10 +30,12 @@ const MyRequestsPage = () => {
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
   const fetchRequests = useCallback(async () => {
     try {
       if (!user?.id) return;
-      const response = await fetch(`http://localhost:4000/posts/user-requests/${user.id}`);
+      const response = await fetch(`${apiUrl}/posts/user-requests/${user.id}`);
       const data = await response.json();
       setRequests(data);
     } catch (error) {
@@ -41,7 +43,7 @@ const MyRequestsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, apiUrl]);
 
   useEffect(() => {
     fetchRequests();
@@ -52,7 +54,7 @@ const MyRequestsPage = () => {
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      const response = await fetch(`http://localhost:4000/posts/participation/${participationId}`, {
+      const response = await fetch(`${apiUrl}/posts/participation/${participationId}`, {
         method: "DELETE",
       });
 
