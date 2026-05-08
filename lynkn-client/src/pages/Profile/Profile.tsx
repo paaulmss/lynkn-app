@@ -23,13 +23,13 @@ import { useAuth } from "../../hooks/useAuth";
 
 export interface Post {
   id: string;
+  user_id: number;
   title: string;
   description: string;
   image_url?: string;
   category: string;
   lat: number;
   lng: number;
-  user_id: string;
   likes?: number;
   comments?: number;
   created_at?: string;
