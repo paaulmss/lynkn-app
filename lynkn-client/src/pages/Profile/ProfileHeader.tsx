@@ -1,14 +1,13 @@
-import { MapPin } from "lucide-react";
+import { MapPin, Camera, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import "./ProfileHeader.css";
 
-// Definimos la interfaz
 interface ProfileHeaderProps {
   user: {
     username: string;
     foto_perfil: string; 
     bio?: string;
     location?: string;
-    status_verif?: string; 
+    status_verif?: string;
     stats?: {
       posts: number | string;
       followers: number | string;
@@ -16,9 +15,24 @@ interface ProfileHeaderProps {
     };
   };
   onEditClick: () => void;
+  onReverifyClick: () => void; // Prop para abrir el modal de la cámara
 }
 
-const ProfileHeader = ({ user, onEditClick }: ProfileHeaderProps) => {
+const ProfileHeader = ({ user, onEditClick, onReverifyClick }: ProfileHeaderProps) => {
+  
+  const renderVerificationBadge = () => {
+    switch (user.status_verif) {
+      case 'approved':
+        return <div className="verif-badge approved"><CheckCircle2 size={14} /> VERIFICADO</div>;
+      case 'pending':
+        return <div className="verif-badge pending"><Clock size={14} /> EN REVISIÓN</div>;
+      case 'rejected':
+        return <div className="verif-badge rejected"><AlertCircle size={14} /> RECHAZADO</div>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <header className="profile-header">
       <div className="avatar-section">
@@ -40,7 +54,19 @@ const ProfileHeader = ({ user, onEditClick }: ProfileHeaderProps) => {
             <button className="edit-profile-action-btn" onClick={onEditClick}>
               Editar perfil
             </button>
+
+            {/* BOTON DE VERIFICACION PARA NO APROBADOS*/}
+            {user.status_verif !== 'approved' && (
+              <button className="reverify-action-btn" onClick={onReverifyClick}>
+                <Camera size={16} />
+                {user.status_verif === 'rejected' ? 'Reintentar selfie' : 'Subir selfie'}
+              </button>
+            )}
           </div>
+        </div>
+
+        <div className="verification-status-row">
+            {renderVerificationBadge()}
         </div>
         
         <div className="stats-row">

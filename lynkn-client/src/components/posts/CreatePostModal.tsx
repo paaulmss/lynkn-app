@@ -11,6 +11,7 @@ import {
   Map as MapIcon,
   Navigation,
   Users,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../api/axiosConfig";
@@ -28,6 +29,10 @@ interface CreatePostProps {
 
 const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   const { user } = useAuth();
+  
+  // Lógica de bloqueo de seguridad
+  const isLocked = user?.role !== "admin" && user?.status_verif !== "approved";
+
   const [caption, setCaption] = useState("");
   const [title, setTitle] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -119,16 +124,15 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isLocked) return;
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 3 * 1024 * 1024) {
         toast.error("Imagen demasiado pesada", {
-          description:
-            "El límite es de 3MB para permitir la validación por IA.",
+          description: "El límite es de 3MB para permitir la validación por IA.",
         });
         return;
       }
-
       if (preview) URL.revokeObjectURL(preview);
       setImage(file);
       setPreview(URL.createObjectURL(file));
@@ -138,12 +142,13 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return;
+
     const TOAST_ID = "post-upload";
 
     if (!isUnlimited && (!maxParticipants || maxParticipants <= 0)) {
       toast.warning("Define el aforo", {
-        description:
-          "Si no es ilimitado, debes indicar al menos 1 participante.",
+        description: "Si no es ilimitado, debes indicar al menos 1 participante.",
       });
       return;
     }
@@ -185,20 +190,14 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       const err = error as ApiError;
       const rawMessage = err.response?.data?.message || "Error de conexión";
 
-      const newErrors: { title?: boolean; caption?: boolean; image?: boolean } =
-        {};
+      const newErrors: { title?: boolean; caption?: boolean; image?: boolean } = {};
       const lowerMsg = rawMessage.toLowerCase();
 
       if (lowerMsg.includes("título")) newErrors.title = true;
-      if (lowerMsg.includes("descripción") || lowerMsg.includes("texto"))
-        newErrors.caption = true;
-      if (lowerMsg.includes("imagen") || lowerMsg.includes("foto"))
-        newErrors.image = true;
+      if (lowerMsg.includes("descripción") || lowerMsg.includes("texto")) newErrors.caption = true;
+      if (lowerMsg.includes("imagen") || lowerMsg.includes("foto")) newErrors.image = true;
 
-      if (
-        lowerMsg.includes("todo") ||
-        lowerMsg.includes("contenido inapropiado")
-      ) {
+      if (lowerMsg.includes("todo") || lowerMsg.includes("contenido inapropiado")) {
         newErrors.title = true;
         newErrors.caption = true;
         newErrors.image = true;
@@ -227,9 +226,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
             <CheckCircle2 size={80} className="check-icon-anim" />
           </div>
           <h2 className="success-title">¡PUBLICADO!</h2>
-          <p className="success-text">
-            Tu descubrimiento ya es parte del mapa.
-          </p>
+          <p className="success-text">Tu descubrimiento ya es parte del mapa.</p>
         </div>
       </div>
     );
@@ -237,7 +234,24 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
 
   return (
     <div className="modal-overlay blur">
-      <div className="create-post-content">
+      <div className={`create-post-content ${isLocked ? "is-locked" : ""}`}>
+        
+        {isLocked && (
+          <div className="modal-security-overlay">
+            <div className="lock-content">
+              <ShieldAlert size={48} color="#ffffff" className="lock-icon-neon" />
+              <h2>ACCIÓN RESTRINGIDA</h2>
+              <p>Debes verificar tu identidad para poder realizar publicaciones en LYNKN.</p>
+              <button 
+                className="reverify-btn" 
+                onClick={() => (window.location.href = "/profile")}
+              >
+                IR A MI PERFIL
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="modal-header">
           <h3>NUEVA PUBLICACIÓN</h3>
           <button type="button" className="close-btn" onClick={onClose}>
@@ -248,7 +262,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         <form onSubmit={handleSubmit} className="create-post-form">
           <div
             className={`upload-section ${errors.image ? "input-error" : ""}`}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => !isLocked && fileInputRef.current?.click()}
           >
             {preview ? (
               <div className="preview-container">
@@ -272,6 +286,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
               onChange={handleFileChange}
               accept="image/*"
               hidden
+              disabled={isLocked}
             />
           </div>
 
@@ -283,11 +298,13 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                 type="text"
                 placeholder="Busca un lugar..."
                 value={searchQuery}
+                disabled={isLocked}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()}
               />
               <button
                 type="button"
+                disabled={isLocked}
                 className={`map-toggle-btn ${showMiniMap ? "active" : ""}`}
                 onClick={() => setShowMiniMap(!showMiniMap)}
               >
@@ -299,9 +316,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                 <div ref={miniMapContainer} className="mini-map-instance" />
               </div>
             )}
-            <div
-              className={`location-status-badge ${location.lat !== 40.4167 ? "ready" : "searching"}`}
-            >
+            <div className={`location-status-badge ${location.lat !== 40.4167 ? "ready" : "searching"}`}>
               <Navigation size={12} />
               <span>{isLocating ? "Localizando..." : "Ubicación fijada"}</span>
             </div>
@@ -314,25 +329,24 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                 <input
                   type="checkbox"
                   checked={isUnlimited}
+                  disabled={isLocked}
                   onChange={(e) => {
                     setIsUnlimited(e.target.checked);
-                    if (e.target.checked) setMaxParticipants(""); // Limpiamos si marca ilimitado
+                    if (e.target.checked) setMaxParticipants("");
                   }}
                 />
                 <span className="checkbox-label">ILIMITADO</span>
               </label>
             </div>
 
-            <div
-              className={`input-with-icon ${isUnlimited ? "disabled-field" : ""}`}
-            >
+            <div className={`input-with-icon ${isUnlimited || isLocked ? "disabled-field" : ""}`}>
               <Users size={16} className="field-icon" />
               <input
                 type="number"
                 min="1"
                 placeholder={isUnlimited ? "Sin límite" : "Ej: 20"}
                 value={maxParticipants}
-                disabled={isUnlimited}
+                disabled={isUnlimited || isLocked}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val !== "" && parseInt(val) <= 0) return;
@@ -347,10 +361,10 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
             <input
               className={errors.title ? "input-error" : ""}
               value={title}
+              disabled={isLocked}
               onChange={(e) => {
                 setTitle(e.target.value);
-                if (errors.title)
-                  setErrors((prev) => ({ ...prev, title: false }));
+                if (errors.title) setErrors((prev) => ({ ...prev, title: false }));
               }}
               placeholder="Ej: Graffiti en Malasaña"
               required
@@ -362,10 +376,10 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
             <textarea
               className={errors.caption ? "input-error" : ""}
               value={caption}
+              disabled={isLocked}
               onChange={(e) => {
                 setCaption(e.target.value);
-                if (errors.caption)
-                  setErrors((prev) => ({ ...prev, caption: false }));
+                if (errors.caption) setErrors((prev) => ({ ...prev, caption: false }));
               }}
               placeholder="¿Qué lo hace especial?"
               rows={3}
@@ -376,9 +390,9 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
           <button
             type="submit"
             className="submit-post-btn"
-            disabled={isAnalyzing || isLocating || !title || !caption}
+            disabled={isLocked || isAnalyzing || isLocating || !title || !caption}
           >
-            {isAnalyzing ? "VERIFICANDO..." : "PUBLICAR"}
+            {isLocked ? "BLOQUEADO" : (isAnalyzing ? "VERIFICANDO..." : "PUBLICAR")}
           </button>
         </form>
       </div>

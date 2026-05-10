@@ -1,17 +1,17 @@
-// Definición del Usuario
+
 export interface User {
-  id: string;
+  id: number;
   username: string;
   email: string;
   birth_day: string;
   foto_perfil: string;
   selfie_real_time: string;
   is_verified: boolean;
-  status_verif: 'pending' | 'approved' | 'rejected';
+  status_verif: 'unverified' | 'pending' | 'approved' | 'rejected';
   role: 'user' | 'admin';
+  verif_message?: string;
 }
 
-// Definición de la Actividad para el mapa
 export interface Post {
   id: string;
   title: string;

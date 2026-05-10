@@ -5,16 +5,25 @@ import {
   ShieldCheck, 
   LogOut, 
   ChevronRight, 
-  Menu, 
+  Menu,
+  AlertTriangle,
+  Clock
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar"; 
-import CreatePostModal from "../../components/posts/CreatePostModal"; 
+import CreatePostModal from "../../components/posts/CreatePostModal";
+import ReverifyModal from "../Profile/ReverifyModal"; 
 import { useAuth } from "../../hooks/useAuth";
 import "./Settings.css";
 
 const Settings = () => {
-  const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useAuth();
+  const { user, isSidebarOpen, setIsSidebarOpen, toggleSidebar, logout } = useAuth();
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [isReverifyOpen, setIsReverifyOpen] = useState(false);
+
+  const handleReverifySuccess = () => {
+    setIsReverifyOpen(false);
+    console.log("Proceso de re-verificación enviado");
+  };
 
   return (
     <div className="explore-container">
@@ -25,10 +34,7 @@ const Settings = () => {
         onNewPostClick={() => setIsCreatePostOpen(true)}
       />
 
-      {/* CONTENIDO PRINCIPAL */}
       <main className={`main-content ${isSidebarOpen ? "sidebar-active" : ""}`}>
-        
-        {/* BARRA SUPERIOR */}
         <header className="top-navbar">
           <button
             className="icon-btn menu-trigger"
@@ -40,7 +46,6 @@ const Settings = () => {
           <div className="navbar-page-title">AJUSTES</div>
         </header>
 
-        {/* CUERPO DE AJUSTES */}
         <div className="settings-page-wrapper">
           <header className="settings-header">
             <h1>AJUSTES</h1>
@@ -48,6 +53,83 @@ const Settings = () => {
           </header>
 
           <div className="settings-grid">
+            
+            {/* SECCION: IDENTIDAD Y SEGURIDAD */}
+            <section className="settings-card verification-status-card">
+              <div className="card-header">
+                <ShieldCheck size={20} />
+                <span>IDENTIDAD Y SEGURIDAD</span>
+              </div>
+              
+              <div className={`status-container ${user?.status_verif}`}>
+                <div className="status-main">
+                  {/* CASO: APROBADO */}
+                  {user?.status_verif === 'approved' && (
+                    <div className="status-content">
+                      <ShieldCheck size={32} color="#00f2ff" />
+                      <div className="status-text">
+                        <span className="status-title">CUENTA VERIFICADA</span>
+                        <small>Tu identidad ha sido confirmada con éxito.</small>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASO: PENDIENTE */}
+                  {user?.status_verif === 'pending' && (
+                    <div className="status-content">
+                      <Clock size={32} color="#f59e0b" />
+                      <div className="status-text">
+                        <span className="status-title">VERIFICACIÓN PENDIENTE</span>
+                        <small>Estamos revisando tu selfie. Esto tardará poco.</small>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASO: NO VERIFICADO */}
+                  {user?.status_verif === 'unverified' && (
+                    <div className="status-content">
+                      <AlertTriangle size={32} color="#ef4444" />
+                      <div className="status-text">
+                        <span className="status-title">IDENTIDAD NO VERIFICADA</span>
+                        <small>Acceso limitado. No puedes unirte a eventos.</small>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASO: RECHAZADO */}
+                  {user?.status_verif === 'rejected' && (
+                    <div className="status-content rejected-layout">
+                      <div className="status-info-group">
+                        <AlertTriangle size={32} color="#ef4444" />
+                        <div className="status-text">
+                          <span className="status-title" style={{ color: "#ef4444" }}>VERIFICACIÓN RECHAZADA</span>
+                          <small>Tu solicitud no cumple los requisitos de seguridad.</small>
+                        </div>
+                      </div>
+                      
+                      {/* Nota del administrador si existe */}
+                      {user?.verif_message && (
+                        <div className="admin-note-settings">
+                          <span className="note-label">NOTA DEL ADMINISTRADOR:</span>
+                          <p>"{user.verif_message}"</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* BOTON DE ACCION*/}
+                {(user?.status_verif === 'unverified' || user?.status_verif === 'rejected') && (
+                  <button 
+                    className="verify-action-btn"
+                    onClick={() => setIsReverifyOpen(true)}
+                  >
+                    {user?.status_verif === 'rejected' ? 'REINTENTAR VERIFICACIÓN' : 'VERIFICAR AHORA'}
+                  </button>
+                )}
+              </div>
+            </section>
+
             {/* SECCION: APP & MAPA */}
             <section className="settings-card">
               <div className="card-header">
@@ -89,20 +171,8 @@ const Settings = () => {
               </div>
             </section>
 
-            {/* SECCION: SEGURIDAD */}
-            <section className="settings-card">
-              <div className="card-header">
-                <ShieldCheck size={20} />
-                <span>SEGURIDAD</span>
-              </div>
-              <div className="settings-item">
-                <span>Verificacion de cuenta</span>
-                <span className="badge-verified">ACTIVA</span>
-              </div>
-            </section>
-
             {/* BOTON CERRAR SESION */}
-            <button className="logout-full-btn">
+            <button className="logout-full-btn" onClick={logout}>
               <LogOut size={20} />
               CERRAR SESION
             </button>
@@ -110,11 +180,18 @@ const Settings = () => {
         </div>
       </main>
 
-      {/* MODAL DE CREACION DE POST */}
+
       {isCreatePostOpen && (
         <CreatePostModal
           onClose={() => setIsCreatePostOpen(false)}
           onSuccess={() => setIsCreatePostOpen(false)}
+        />
+      )}
+
+      {isReverifyOpen && (
+        <ReverifyModal 
+          onClose={() => setIsReverifyOpen(false)} 
+          onUpload={handleReverifySuccess} 
         />
       )}
     </div>

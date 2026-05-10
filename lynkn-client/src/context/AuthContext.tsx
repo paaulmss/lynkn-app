@@ -6,10 +6,11 @@ export interface User {
   email: string;
   username: string;
   role: 'admin' | 'user';
-  status_verif: 'pending' | 'approved' | 'rejected';
+  status_verif: 'pending' | 'approved' | 'rejected' | 'unverified'; 
   foto_perfil: string; 
   bio?: string;
   location?: string;
+  verif_message?: string;
 }
 
 export interface AuthContextType {
@@ -24,5 +25,4 @@ export interface AuthContextType {
   toggleSidebar: () => void;
 }
 
-// Aquí no usamos useState ni useEffect, por eso los borramos del import
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

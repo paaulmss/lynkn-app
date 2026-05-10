@@ -9,4 +9,6 @@ export class UsersController {
   async getApprovedUsers() {
     return await this.usersService.findApproved();
   }
+
+  
 }

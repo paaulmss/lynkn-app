@@ -32,6 +32,9 @@ export class User {
   @Column({ name: 'status_verif', length: 20, default: 'pending' })
   statusVerif: string;
 
+  @Column({ name: 'verif_message', type: 'text', nullable: true })
+  verifMessage: string;
+
   @Column({ type: 'double precision', nullable: true })
   lat: number;
 

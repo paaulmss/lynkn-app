@@ -128,27 +128,38 @@ export class PostsService {
   }
 
   async getUserRequests(userId: number) {
-    const { data, error } = await this.supabase
-      .from("participations")
-      .select(
-        `
+  const { data, error } = await this.supabase
+    .from("participations")
+    .select(`
+      id,
+      status,
+      user_id,
+      posts (
         id,
-        status,
-        post_id,
-        posts (
-          title,
-          image_url,
-          event_date,
-          category
-        )
-      `,
+        user_id,
+        title,
+        image_url,
+        event_date,
+        category,
+        users (username)
       )
-      .eq("user_id", userId)
-      .order("id", { ascending: false });
+    `)
+    .eq("user_id", userId);
 
-    if (error) throw new InternalServerErrorException(error.message);
-    return data;
-  }
+  if (error) throw new InternalServerErrorException(error.message);
+
+  console.log(`Usuario ${userId} tiene ${data?.length} participaciones totales.`);
+
+  const filtered = data?.filter((req: any) => {
+    if (!req.posts) return false; 
+    
+    return Number(req.user_id) !== Number(req.posts.user_id);
+  });
+
+  console.log(`Tras filtrar (excluyendo posts propios), quedan: ${filtered?.length}`);
+
+  return filtered || [];
+}
 
   async requestJoin(postId: number, userId: number) {
     const { data: post, error: postError } = await this.supabase
@@ -263,101 +274,117 @@ export class PostsService {
   }
 
   async getParticipants(postId: number) {
+    const { data: post } = await this.supabase
+      .from("posts")
+      .select("user_id")
+      .eq("id", postId)
+      .single();
+
+    const ownerId = Number(post?.user_id);
+
     const { data, error } = await this.supabase
       .from("participations")
       .select("id, status, user_id, users (username, foto_perfil)")
-      .eq("post_id", postId);
+      .eq("post_id", postId)
+      .neq("user_id", ownerId); // Usamos la variable casteada
+
     if (error) throw new InternalServerErrorException(error.message);
     return data;
   }
 
   async updateParticipationStatus(participationId: number, status: "accepted" | "rejected") {
-  try {
-    const { data: currentPart, error: currentError } = await this.supabase
-      .from("participations")
-      .select("status, post_id, user_id, users(username)")
-      .eq("id", participationId)
-      .single();
-
-    if (currentError || !currentPart) throw new InternalServerErrorException("No se encontró la participación");
-
-    if (status === "accepted") {
-      const { data: postInfo } = await this.supabase
-        .from("posts")
-        .select("max_particip, current_particip")
-        .eq("id", currentPart.post_id)
+    try {
+      // Obtener el estado actual y datos del usuario
+      const { data: currentPart, error: currentError } = await this.supabase
+        .from("participations")
+        .select("status, post_id, user_id, users(username), posts(user_id)")
+        .eq("id", participationId)
         .single();
 
-      const isUnlimited = postInfo.max_particip === 0;
-      if (!isUnlimited && postInfo.current_particip >= postInfo.max_particip) {
-        throw new BadRequestException("El evento ya ha alcanzado el límite de participantes");
+      if (currentError || !currentPart) throw new InternalServerErrorException("No se encontró la participación");
+
+      const ownerId = (currentPart.posts as any)?.user_id;
+      if (status === "rejected" && currentPart.user_id === ownerId) {
+        throw new BadRequestException("El organizador no puede ser expulsado de su propio evento");
       }
-    }
 
-    const { data: updatedPart, error: updateError } = await this.supabase
-      .from("participations")
-      .update({ status })
-      .eq("id", participationId)
-      .select("*, posts(user_id, title)")
-      .single();
-
-    if (updateError) throw new InternalServerErrorException(updateError.message);
-
-    const userArray = currentPart.users as unknown as { username: string }[];
-    const participantUsername = Array.isArray(userArray) ? userArray[0]?.username : (userArray as any)?.username;
-
-    if (updatedPart) {
-      // CASO A: ACEPTAR A ALGUIEN NUEVO
       if (status === "accepted") {
-        await this.supabase.rpc("increment_participant", { row_id: updatedPart.post_id });
+        const { data: postInfo } = await this.supabase
+          .from("posts")
+          .select("max_particip, current_particip")
+          .eq("id", currentPart.post_id)
+          .single();
 
-        await this.supabase.from("messages").insert([{
-          post_id: updatedPart.post_id,
-          sender_id: updatedPart.posts.user_id,
-          content: `${participantUsername} se ha unido al grupo`,
-          type: "system"
-        }]);
+        const isUnlimited = postInfo.max_particip === 0;
+        if (!isUnlimited && postInfo.current_particip >= postInfo.max_particip) {
+          throw new BadRequestException("El evento ya ha alcanzado el límite de participantes");
+        }
       }
 
-      // CASO B: EXPULSAR / RECHAZAR A ALGUIEN QUE YA ESTABA DENTRO
-      if (currentPart.status === "accepted" && status === "rejected") {
-        // RECALCULO: Liberar plaza en la DB para que otro pueda entrar
-        await this.supabase.rpc("decrement_participant", { row_id: updatedPart.post_id });
+      const { data: updatedPart, error: updateError } = await this.supabase
+        .from("participations")
+        .update({ status })
+        .eq("id", participationId)
+        .select("*, posts(user_id, title)")
+        .single();
 
-        // Chat: Mensaje de sistema informativo para los que siguen dentro
-        await this.supabase.from("messages").insert([{
-          post_id: updatedPart.post_id,
-          sender_id: updatedPart.posts.user_id,
-          content: `${participantUsername} ha sido eliminado del evento por el organizador`,
-          type: "system"
-        }]);
+      if (updateError) throw new InternalServerErrorException(updateError.message);
 
-        // NOTIFICACIÓN: Aviso de expulsión al usuario
-        await this.createNotification(
-          updatedPart.user_id,
-          updatedPart.posts.user_id,
-          updatedPart.post_id,
-          'kicked'
-        );
+      const userArray = currentPart.users as unknown as { username: string }[];
+      const participantUsername = Array.isArray(userArray) ? userArray[0]?.username : (userArray as any)?.username;
+
+      if (updatedPart) {
+        // CASO A: ACEPTAR A ALGUIEN NUEVO
+        if (status === "accepted") {
+          await this.supabase.rpc("increment_participant", { row_id: updatedPart.post_id });
+
+          await this.supabase.from("messages").insert([{
+            post_id: updatedPart.post_id,
+            sender_id: updatedPart.posts.user_id,
+            content: `${participantUsername} se ha unido al grupo`,
+            type: "system"
+          }]);
+        }
+
+        // CASO B: EXPULSAR / RECHAZAR A ALGUIEN QUE YA ESTABA DENTRO
+        if (currentPart.status === "accepted" && status === "rejected") {
+          // RECALCULO: Liberar plaza en la DB para que otro pueda entrar
+          await this.supabase.rpc("decrement_participant", { row_id: updatedPart.post_id });
+
+          // Chat: Mensaje de sistema informativo para los que siguen dentro
+          await this.supabase.from("messages").insert([{
+            post_id: updatedPart.post_id,
+            sender_id: updatedPart.posts.user_id,
+            content: `${participantUsername} ha sido eliminado del evento por el organizador`,
+            type: "system"
+          }]);
+
+          // NOTIFICACIÓN: Aviso de expulsión al usuario
+          await this.createNotification(
+            updatedPart.user_id,
+            updatedPart.posts.user_id,
+            updatedPart.post_id,
+            'kicked'
+          );
+        }
+
+        // Limpiar notificaciones de solicitud antiguas
+        await this.supabase
+          .from("notifications")
+          .delete()
+          .eq("user_id", updatedPart.posts.user_id)
+          .eq("post_id", updatedPart.post_id)
+          .eq("sender_id", updatedPart.user_id)
+          .eq("type", "join_request");
       }
 
-      // Limpiar notificaciones de solicitud antiguas
-      await this.supabase
-        .from("notifications")
-        .delete()
-        .eq("user_id", updatedPart.posts.user_id)
-        .eq("post_id", updatedPart.post_id)
-        .eq("sender_id", updatedPart.user_id)
-        .eq("type", "join_request");
+      return updatedPart;
+    } catch (error) {
+      console.error("Error en updateParticipationStatus:", error);
+      if (error instanceof BadRequestException) throw error;
+      throw new InternalServerErrorException("No se pudo procesar el cambio de estado");
     }
-
-    return updatedPart;
-  } catch (error) {
-    console.error("Error en updateParticipationStatus:", error);
-    if (error instanceof BadRequestException) throw error;
-    throw new InternalServerErrorException("No se pudo procesar el cambio de estado");
   }
-}
 
   async deletePost(postId: number, userId: number) {
     const { data: participants, error: fetchError } = await this.supabase

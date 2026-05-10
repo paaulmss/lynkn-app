@@ -126,6 +126,46 @@
   font-size: 0.85rem;
 }
 
+.verification-status-row {
+    margin: 5px 0 15px 0;
+}
+
+.verif-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.verif-badge.approved { background: #22c55e; color: #fff; }
+.verif-badge.pending { background: #f59e0b; color: #fff; }
+.verif-badge.rejected { background: #ef4444; color: #fff; }
+
+.reverify-action-btn {
+    background: #ffffff;
+    color: #000;
+    border: none;
+    padding: 0 15px;
+    height: 32px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reverify-action-btn:hover {
+    background: #e4e4e7;
+    transform: translateY(-1px);
+}
+
 /* ==========================================================================
    RESPONSIVE (MÓVIL)
    ========================================================================== */

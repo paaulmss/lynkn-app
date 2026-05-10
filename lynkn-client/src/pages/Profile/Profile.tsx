@@ -9,7 +9,7 @@ import {
   Loader2,
 } from "lucide-react";
 import "./Profile.css";
-import EditProfileModal from "./EditProfileModal"; 
+import EditProfileModal from "./EditProfileModal";
 import ProfileMap from "./ProfileMap";
 import ProfileHeader from "./ProfileHeader";
 import Sidebar from "../../components/Sidebar";
@@ -35,7 +35,7 @@ export interface Post {
   created_at?: string;
   max_particip?: number;
   status?: string;
-  event_date?: string; 
+  event_date?: string;
 }
 
 const Profile = () => {
@@ -119,13 +119,25 @@ const Profile = () => {
                 <ShieldAlert size={24} color="#ff4444" />
                 <div className="banner-text">
                   <strong>VERIFICACIÓN RECHAZADA</strong>
-                  <p>Sube una nueva selfie para activar tu cuenta.</p>
+
+                  {user.verif_message ? (
+                    <div className="admin-feedback-box">
+                      <p className="feedback-label">NOTA DEL ADMINISTRADOR:</p>
+                      <p className="feedback-content">"{user.verif_message}"</p>
+                    </div>
+                  ) : (
+                    <p>
+                      Tu identidad no pudo ser confirmada. Por favor, revisa tus
+                      fotos.
+                    </p>
+                  )}
                 </div>
+
                 <button
                   className="reverify-inline-btn"
                   onClick={() => setIsReverifyOpen(true)}
                 >
-                  SUBIR SELFIE
+                  REINTENTAR VERIFICACIÓN
                 </button>
               </div>
             )}
@@ -140,6 +152,7 @@ const Profile = () => {
                 },
               }}
               onEditClick={() => setIsEditModalOpen(true)}
+              onReverifyClick={() => setIsReverifyOpen(true)}
             />
 
             <nav className="view-switcher">
@@ -234,7 +247,7 @@ const Profile = () => {
             user_id: Number(selectedPost.user_id),
             image_url: selectedPost.image_url || "",
             event_date: selectedPost.event_date || "",
-            max_particip: selectedPost.max_particip || 0, 
+            max_particip: selectedPost.max_particip || 0,
           }}
           onClose={() => setSelectedPost(null)}
         />
@@ -246,7 +259,7 @@ const Profile = () => {
           onClose={() => setIsEditModalOpen(false)}
           onSuccess={() => {
             setIsEditModalOpen(false);
-            window.location.reload(); 
+            window.location.reload();
           }}
         />
       )}

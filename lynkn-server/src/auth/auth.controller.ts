@@ -1,13 +1,13 @@
-import { 
-  Controller, 
-  Post, 
-  Get, 
-  Patch, 
-  Body, 
-  Param, 
-  BadRequestException, 
-  InternalServerErrorException, 
-  Logger 
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  BadRequestException,
+  InternalServerErrorException,
+  Logger
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -22,7 +22,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService
-  ) {}
+  ) { }
 
   @Post('google')
   async googleLogin(@Body('token') token: string) {
@@ -54,17 +54,24 @@ export class AuthController {
     }
   }
 
+  @Post('check-availability')
+  async checkAvailability(@Body() body: { email: string; username: string }) {
+    return await this.authService.checkAvailability(body.email, body.username);
+  }
+
   @Post('reverify')
   async reverify(@Body() data: { userId: number, imageBase64: string }) {
     try {
-      await this.usersService.updateStatus(data.userId, 'pending');
-      return { 
-        status: 'ok', 
-        message: 'Verificación enviada correctamente. Estado: Pendiente.' 
+      await this.usersService.updateStatus(data.userId, 'pending', data.imageBase64);
+      
+      return {
+        status: 'ok',
+        message: 'Verificación enviada correctamente. Tu cuenta está ahora en revisión.'
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       this.logger.error(`Error en Reverify: ${errorMessage}`);
+      
       throw new InternalServerErrorException('No se pudo procesar la reverificación');
     }
   }
@@ -82,15 +89,19 @@ export class AuthController {
     }
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard)
+ @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch('admin/verify/:id')
   async verifyUser(
     @Param('id') id: string,
-    @Body('status') status: 'approved' | 'rejected'
+    @Body() body: { status: 'approved' | 'rejected', message?: string }
   ) {
     try {
-      await this.usersService.updateStatus(Number(id), status);
-      return { status: 'success', message: `Usuario actualizado a ${status}` };
+      await this.usersService.updateStatus(Number(id), body.status, undefined, body.message);
+      
+      return { 
+        status: 'success', 
+        message: `Usuario actualizado a ${body.status}${body.message ? ' con motivo' : ''}` 
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       this.logger.error(`Error verificando usuario ${id}: ${errorMessage}`);

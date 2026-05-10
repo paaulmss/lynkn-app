@@ -41,7 +41,7 @@ interface UserData {
   email: string;
   username: string;
   role: "admin" | "user";
-  status_verif: "pending" | "approved" | "rejected";
+  status_verif: "pending" | "approved" | "rejected" | "unverified";
   foto_perfil?: string;
 }
 

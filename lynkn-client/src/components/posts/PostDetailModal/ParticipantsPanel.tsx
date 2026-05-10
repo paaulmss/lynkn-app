@@ -15,17 +15,28 @@ interface ParticipantsPanelProps {
   participants: Participant[];
   onAction: (id: number, status: 'accepted' | 'rejected') => void;
   isFull: boolean;
+  ownerId: number;
 }
 
-const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({ participants, onAction, isFull }) => {
+const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({ 
+  participants, 
+  onAction, 
+  isFull, 
+  ownerId 
+}) => {
+
+  const filteredParticipants = participants.filter(
+    (p) => Number(p.user_id) !== Number(ownerId)
+  );
+
   return (
     <div className="nomad-admin-panel">
       <h3 className="admin-panel-title">GESTIÓN DE ASISTENTES</h3>
       <div className="admin-list">
-        {participants.length === 0 ? (
+        {filteredParticipants.length === 0 ? (
           <p className="no-participants">No hay solicitudes aún.</p>
         ) : (
-          participants.map((p) => (
+          filteredParticipants.map((p) => (
             <div key={p.id} className="admin-item">
               <div className="admin-user-info">
                 <img 
@@ -40,6 +51,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({ participants, onA
               </div>
 
               <div className="admin-actions-btns">
+                {/* CASO 1: SOLICITUD PENDIENTE */}
                 {p.status === 'pending' && (
                   <>
                     <button 
@@ -60,6 +72,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({ participants, onA
                   </>
                 )}
 
+                {/* CASO 2: YA ACEPTADO (Opcion expulsar) */}
                 {p.status === 'accepted' && (
                   <>
                     <span className="status-badge accepted">ACEPTADO</span>
@@ -73,6 +86,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({ participants, onA
                   </>
                 )}
 
+                {/* CASO 3: RECHAZADO / BANEADO */}
                 {p.status === 'rejected' && (
                   <span className="status-badge rejected">RECHAZADO</span>
                 )}

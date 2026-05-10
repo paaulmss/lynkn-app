@@ -12,29 +12,21 @@ const ProtectedRoute = ({ children, adminOnly = false }: Props) => {
   const { user, isAuthenticated, token } = useAuth();
   const location = useLocation();
 
-  //Si no hay token o no está autenticado, al login
+  // 1. SEGURIDAD BASICA
   if (!isAuthenticated || !token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // LÓGICA DE APROBACIÓN: 
-  // Si no es admin y su estado no es 'approved', bloqueamos el acceso.
-  const isApproved = user?.status_verif === 'approved';
   const isAdmin = user?.role === 'admin';
 
-  if (!isAdmin && !isApproved) {
-    console.warn("Acceso restringido: Cuenta en estado", user?.status_verif);
-    return <Navigate to="/profile" replace />; 
-  }
-
-  // LÓGICA DE ADMIN:
-  // Si la ruta es exclusiva de admin y el usuario no tiene el rol, al explore
+  // 2. LOGICA DE ADMIN: 
+  // Si la ruta requiere ser admin y el usuario no lo es, lo mandamos a la pagina principal (explore).
   if (adminOnly && !isAdmin) {
     console.warn("Acceso denegado: Se requiere rol de administrador");
     return <Navigate to="/explore" replace />;
   }
 
-  //Si pasa todos los filtros, renderizamos el contenido
+  // 3. NAVEGACION LIBRE
   return <>{children}</>;
 };
 

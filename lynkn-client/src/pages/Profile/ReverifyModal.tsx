@@ -17,8 +17,22 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => {
+        t.stop();
+        console.log("Cámara apagada:", t.label);
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
 
   useEffect(() => {
     const socket: Socket = io(SERVER_URL, {
@@ -39,15 +53,22 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
     return () => {
       socket.off('receive-selfie');
       socket.disconnect();
+      stopCamera();
     };
   }, [mode, sessionId, SERVER_URL]);
 
   const startCamera = async () => {
     setMode('camera');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch { 
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' } 
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) { 
+      console.error("Error cámara:", err);
       alert("No se pudo acceder a la cámara.");
       setMode('options');
     }
@@ -63,12 +84,6 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
       ctx?.drawImage(video, 0, 0);
       setCapturedImage(canvas.toDataURL('image/jpeg'));
       stopCamera();
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
     }
   };
 
@@ -101,7 +116,7 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
                   <video ref={videoRef} autoPlay playsInline muted />
                   <div className="camera-ui-overlay">
                     <button onClick={takePhoto} className="capture-btn">CAPTURAR</button>
-                    <button onClick={() => setMode('options')} className="btn-cancel-cam">VOLVER</button>
+                    <button onClick={() => { stopCamera(); setMode('options'); }} className="btn-cancel-cam">VOLVER</button>
                   </div>
                 </div>
               )}

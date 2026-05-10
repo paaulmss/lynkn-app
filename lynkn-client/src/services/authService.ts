@@ -10,8 +10,8 @@ interface RegisterData {
   [key: string]: unknown;
 }
 
-interface LoginCredentials {
-  email: string;
+export interface LoginCredentials {
+  identifier: string;
   password: string;
 }
 

@@ -152,6 +152,138 @@
 }
 
 /* ==========================================================================
+   STATUS CUENTA
+   ========================================================================== */
+
+   .status-container {
+  padding: 15px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.status-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-title {
+  font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.status-text small {
+  font-size: 0.7rem;
+  color: #71717a;
+  margin-top: 2px;
+}
+
+.status-container.approved { border-left: 3px solid #00f2ff; }
+.status-container.pending { border-left: 3px solid #f59e0b; }
+.status-container.unverified { border-left: 3px solid #ef4444; }
+
+.verify-action-btn {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 12px;
+  font-weight: 900;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.verify-action-btn:hover {
+  background: #00f2ff;
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+}
+
+/* ==========================================================================
+   ESTADOS DE VERIFICACION (RECHAZADO)
+   ========================================================================== */
+
+.status-container.rejected {
+    border-left: 3px solid #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.rejected-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.status-info-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.admin-note-settings {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-note-settings::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 3px;
+    background: #ef4444;
+}
+
+.admin-note-settings .note-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 900;
+    color: #ef4444;
+    margin-bottom: 6px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.admin-note-settings p {
+    font-size: 0.85rem;
+    color: #d1d1d6;
+    line-height: 1.4;
+    margin: 0;
+    font-style: italic;
+    font-family: inherit;
+}
+
+.status-container.rejected .verify-action-btn {
+    background: #ef4444;
+    color: #fff;
+    margin-top: 5px;
+}
+
+.status-container.rejected .verify-action-btn:hover {
+    background: #ff5a5a;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+.status-container.rejected .status-title {
+    color: #ef4444;
+}
+
+/* ==========================================================================
    BOTON CERRAR SESION
    ========================================================================== */
 .logout-full-btn {

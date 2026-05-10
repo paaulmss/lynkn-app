@@ -138,3 +138,11 @@
   padding: 100px 0;
   color: #333;
 }
+
+.request-organizer {
+  color: #00f2ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

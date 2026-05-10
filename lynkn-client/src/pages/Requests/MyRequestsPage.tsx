@@ -22,6 +22,9 @@ interface RequestItem {
     image_url: string;
     event_date: string;
     category: string;
+    users: {
+      username: string;
+    };
   };
 }
 
@@ -34,6 +37,7 @@ const MyRequestsPage = () => {
 
   const fetchRequests = useCallback(async () => {
     try {
+      setLoading(true);
       if (!user?.id) return;
       const response = await fetch(`${apiUrl}/posts/user-requests/${user.id}`);
       const data = await response.json();
@@ -109,7 +113,9 @@ const MyRequestsPage = () => {
 
                   <div className="request-content">
                     <div className="request-info">
-                      <span className="request-category">{item.posts.category}</span>
+                      <span className="request-organizer">
+                        Organizado por @{item.posts.users?.username || "usuario"}
+                      </span>
                       <h3>{item.posts.title}</h3>
                       <div className="request-meta">
                         <Calendar size={14} />

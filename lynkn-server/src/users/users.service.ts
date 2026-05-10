@@ -22,12 +22,12 @@ export class UsersService {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-        console.error('Error Supabase findByEmail:', error.message);
-        throw error;
+      console.error('Error Supabase findByEmail:', error.message);
+      throw error;
     }
 
     if (data) {
-        console.log(`Usuario encontrado: ${data.email}, Rol: ${data.role}, Status: ${data.status_verif}`);
+      console.log(`Usuario encontrado: ${data.email}, Rol: ${data.role}, Status: ${data.status_verif}`);
     }
 
     return data;
@@ -41,7 +41,10 @@ export class UsersService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error de Supabase al crear usuario:', error.message, 'Código:', error.code);
+      throw new InternalServerErrorException(error.message);
+    }
     return data;
   }
 
@@ -53,18 +56,27 @@ export class UsersService {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error && error.code !== 'PGRST116') throw error;
     return data;
   }
 
-  // Actualizar el estado de verificación
-  async updateStatus(id: number, status: string): Promise<void> {
-    const { error } = await this.supabase
-      .from('users')
-      .update({ status_verif: status })
-      .eq('id', id);
-    if (error) throw error;
+async updateStatus(id: number, status: string, selfieBase64?: string, adminMessage?: string): Promise<void> {
+  const updateData: any = { 
+    status_verif: status,
+    verif_message: adminMessage
+  };
+  
+  if (selfieBase64) {
+    updateData.selfie_real_time = selfieBase64;
   }
+
+  const { error } = await this.supabase
+    .from('users')
+    .update(updateData)
+    .eq('id', id);
+
+  if (error) throw error;
+}
 
   // Buscar usuarios aprobados para el mapa
   async findApproved() {
@@ -75,32 +87,54 @@ export class UsersService {
 
     if (error) throw error;
     return data;
-}
+  }
 
-async findPending() {
-  const { data, error } = await this.supabase
-    .from('users')
-    .select('id, username, email, foto_perfil, selfie_real_time, status_verif')
-    .eq('status_verif', 'pending');
+  async findPending() {
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('id, username, email, foto_perfil, selfie_real_time, status_verif')
+      .eq('status_verif', 'pending');
 
-  if (error) throw error;
-  return data;
-}
+    if (error) throw error;
+    return data;
+  }
 
-async updateProfile(userId: number, updateData: any) {
-  const { data, error } = await this.supabase
-    .from('users')
-    .update({
-      username: updateData.username,
-      bio: updateData.bio,
-      birth_day: updateData.birth_day,
-      foto_perfil: updateData.foto_perfil,
-    })
-    .eq('id', userId)
-    .select()
-    .single();
+  async findByUsername(username: string) {
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('username', username.toLowerCase())
+      .single();
+    
+    if (error && error.code !== 'PGRST116') return null;
+    return data;
+  }
 
-  if (error) throw new InternalServerErrorException(error.message);
-  return data;
-}
+  async findByIdentifier(identifier: string) {
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('*')
+      .or(`email.eq.${identifier},username.eq.${identifier.toLowerCase()}`)
+      .single();
+
+    if (error) return null;
+    return data;
+  }
+
+  async updateProfile(userId: number, updateData: any) {
+    const { data, error } = await this.supabase
+      .from('users')
+      .update({
+        username: updateData.username,
+        bio: updateData.bio,
+        birth_day: updateData.birth_day,
+        foto_perfil: updateData.foto_perfil,
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return data;
+  }
 }
