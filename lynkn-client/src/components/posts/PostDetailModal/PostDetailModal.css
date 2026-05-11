@@ -13,27 +13,27 @@
   animation: nomadFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes nomadFade {
-  from {
-    opacity: 0;
-  }
+body.light-mode .nomad-overlay {
+  background: rgba(255, 255, 255, 0.9);
+}
 
-  to {
-    opacity: 1;
-  }
+@keyframes nomadFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .nomad-modal {
-  background: #000;
+  background: var(--bg-dark);
   width: 95%;
   max-width: 1050px;
   height: 85vh;
   display: flex;
   border-radius: 4px;
-  border: 1px solid #1a1a1a;
+  border: 1px solid var(--border);
   overflow: hidden;
   position: relative;
-  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--card-shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* ==========================================================================
@@ -43,7 +43,7 @@
 /* Visual (Izquierda) */
 .nomad-image-section {
   flex: 1.4;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,18 +59,15 @@
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.nomad-image-section:hover img {
-  transform: scale(1.05) rotate(-1deg);
-}
 
 /* Contenido (Derecha) */
 .nomad-info-section {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #000;
+  background: var(--bg-dark);
   position: relative;
-  border-left: 1px solid #1a1a1a;
+  border-left: 1px solid var(--border);
 }
 
 .nomad-scroll-area {
@@ -78,7 +75,7 @@
   overflow-y: auto;
   flex: 1;
   scrollbar-width: thin;
-  scrollbar-color: #1a1a1a transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 /* ==========================================================================
@@ -95,23 +92,22 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid #1a1a1a;
+  border: 1px solid var(--border);
   object-fit: cover;
 }
 
 .nomad-username {
   font-weight: 700;
   font-size: 0.9rem;
-  color: #ffffff;
+  color: var(--text-main);
 }
-
 
 .nomad-title {
   font-size: 2.2rem;
   font-weight: 900;
   line-height: 1.1;
   margin-bottom: 28px;
-  color: #ffffff;
+  color: var(--text-main);
   text-transform: uppercase;
   letter-spacing: -1px;
 }
@@ -119,7 +115,7 @@
 .nomad-description {
   font-size: 0.95rem;
   line-height: 1.7;
-  color: #a1a1aa;
+  color: var(--text-muted);
   margin-bottom: 32px;
 }
 
@@ -127,7 +123,7 @@
   display: flex;
   gap: 48px;
   margin-bottom: 32px;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 24px;
 }
 
@@ -139,12 +135,12 @@
 .nomad-stat-value {
   font-size: 1.2rem;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-main);
 }
 
 .nomad-stat-label {
   font-size: 0.6rem;
-  color: #71717a;
+  color: var(--text-muted);
   letter-spacing: 2.5px;
   text-transform: uppercase;
 }
@@ -160,18 +156,19 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #71717a;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
 .nomad-map-wrapper {
-  height: 200px;
+  height: 250px;
   width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid #1a1a1a;
-  background: #0a0a0a;
-  margin-top: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  margin-top: 20px;
+  position: relative;
 }
 
 .nomad-map-canvas {
@@ -180,21 +177,20 @@
 }
 
 /* ==========================================================================
-   FOOTER Y BOTONES DE ACCION INTELIGENTES
+   FOOTER Y BOTONES DE ACCION
    ========================================================================== */
 .nomad-footer {
   padding: 32px 40px;
-  border-top: 1px solid #1a1a1a;
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: #000;
+  background: var(--bg-dark);
 }
 
-
 .nomad-btn-join {
-  background: #ffffff;
-  color: #000;
+  background: var(--text-main);
+  color: var(--bg-dark);
   border: none;
   padding: 20px;
   font-weight: 900;
@@ -210,9 +206,9 @@
 }
 
 .nomad-btn-join:not(:disabled):hover {
-  background: #00ffff;
+  background: #00f2ff;
   transform: translateY(-4px);
-  box-shadow: 0 15px 40px rgba(0, 255, 255, 0.2);
+  box-shadow: 0 15px 40px rgba(0, 242, 255, 0.2);
 }
 
 .nomad-btn-status-redirect {
@@ -222,49 +218,20 @@
   justify-content: space-between;
   padding: 18px 24px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-main);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.status-label-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 800;
-  font-size: 0.7rem;
-  letter-spacing: 1px;
-}
-
-.nomad-btn-status-redirect.pending {
-  border-color: #71717a;
-  color: #a1a1aa;
-}
-
-.nomad-btn-status-redirect.accepted {
-  border-color: #22c55e;
-  color: #22c55e;
-}
-
-.nomad-btn-status-redirect.rejected {
-  border-color: #ef4444;
-  color: #ef4444;
-}
-
-.nomad-btn-status-redirect:hover {
-  background: rgba(255, 255, 255, 0.07);
-  transform: translateY(-2px);
-}
-
 /* ==========================================================================
-   PANEL DE ADMINISTRACION (VISTA ORGANIZADOR)
+   ADMIN PANEL
    ========================================================================== */
 .nomad-btn-admin {
   background: transparent;
-  color: #ffffff;
-  border: 1px solid #333;
+  color: var(--text-main);
+  border: 1px solid var(--border);
   padding: 18px;
   display: flex;
   align-items: center;
@@ -279,78 +246,109 @@
 }
 
 .nomad-btn-admin:hover {
-  background: #ffffff;
-  color: #000;
+  background: var(--text-main);
+  color: var(--bg-dark);
 }
 
+/* --- Panel de Administracion --- */
 .nomad-admin-panel {
-  background: #050505;
-  border: 1px solid #1a1a1a;
-  padding: 20px;
-  margin-top: 20px;
-  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  padding: 24px;
+  margin-top: 24px;
+  border-radius: 8px;
+}
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .admin-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  margin-bottom: 8px;
-}
-
-.admin-user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: transform 0.2s ease;
 }
 
 .admin-mini-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  border: 1px solid var(--border);
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.btn-approve {
-  background: #22c55e;
-  color: #000;
-  border-radius: 8px;
-  border: none;
-  padding: 6px;
-  cursor: pointer;
+.admin-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.btn-reject {
-  background: #ef4444;
-  color: #fff;
-  border-radius: 8px;
-  border: none;
-  padding: 6px;
-  cursor: pointer;
+/* --- Botones de Accion Internos --- */
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Botón específico de Expulsar */
-.btn-kick {
-  background: rgba(255, 77, 77, 0.1);
-  color: #ff4d4d;
-  border: 1px solid rgba(255, 77, 77, 0.2);
-  padding: 6px;
-  border-radius: 8px;
-  cursor: pointer;
+.btn-approve-action, .btn-reject-action, .btn-kick-action {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
-.btn-kick:hover {
-  background: #ff4d4d;
-  color: white;
-  transform: scale(1.05);
+.btn-approve-action {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+.btn-approve-action:hover:not(:disabled) {
+  background: #22c55e;
+  color: #fff;
+}
+
+.btn-reject-action, .btn-kick-action {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+.btn-reject-action:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* --- Badges de estado --- */
+.status-badge-inline {
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.status-badge-inline.accepted {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.status-badge-inline.rejected {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Estilo para los botones en modo claro */
+body.light-mode .admin-item {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 /* ==========================================================================
@@ -362,102 +360,87 @@
   right: 24px;
   background: transparent;
   border: none;
-  color: #52525b;
+  color: var(--text-muted);
   cursor: pointer;
   z-index: 10;
   transition: 0.2s ease;
 }
 
 .nomad-close-desktop:hover {
-  color: #ffffff;
+  color: var(--text-main);
   transform: rotate(90deg);
 }
 
-.nomad-close-mobile {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: white;
-  padding: 8px;
-  border-radius: 50%;
-  display: none;
+/* Progress Circle */
+.circle-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 6;
 }
 
-@media (max-width: 768px) {
-  .nomad-modal {
-    flex-direction: column;
-    height: 95vh;
-    width: 100%;
-    border-radius: 0;
-  }
 
-  .nomad-image-section {
-    flex: none;
-    height: 30%;
-  }
-
-  .nomad-info-section {
-    border-left: none;
-    border-top: 1px solid #1a1a1a;
-  }
-
-  .nomad-close-desktop {
-    display: none;
-  }
-
-  .nomad-close-mobile {
-    display: flex;
-    z-index: 20;
-  }
-
-  .nomad-scroll-area {
-    padding: 30px 24px;
-  }
-
-  .nomad-title {
-    font-size: 1.8rem;
-  }
-
-  .nomad-footer {
-    padding: 24px;
-  }
-
-  .title-stats-row {
+.title-stats-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 20px;
   margin-bottom: 20px;
 }
 
 .circular-progress-container {
   position: relative;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .circle-bg {
-  fill: none;
-  stroke: #1a1a1a;
+  fill: var(--bg-dark);
+  stroke: var(--border);
   stroke-width: 6;
+  transition: fill 0.3s ease;
 }
 
 .circle-progress {
   fill: none;
-  stroke: #00f2ff;
   stroke-width: 6;
   stroke-linecap: round;
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
-  transition: stroke-dashoffset 0.5s ease;
+  transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
 }
+
+.percentage-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text-main);
+  pointer-events: none;
+}
+
+body.light-mode .nomad-modal,
+body.light-mode .nomad-info-section,
+body.light-mode .nomad-footer {
+  background-color: #ffffff;
+}
+
 
 .percentage-display {
   position: absolute;
   font-size: 14px;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-main);
 }
+
+@media (max-width: 768px) {
+  .nomad-info-section {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
 }

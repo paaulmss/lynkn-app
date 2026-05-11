@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
+import { useTranslation } from "react-i18next";
+import { AlertCircle } from "lucide-react"; // Importamos el icono para el error
 import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../services/authService";
 import "./Login.css";
 
 const GoogleCustomButton = () => {
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -33,7 +36,7 @@ const GoogleCustomButton = () => {
         alt="Google"
         className="google-icon"
       />
-      CONTINUAR CON GOOGLE
+      {t('auth.login.btn_google')}
     </button>
   );
 };
@@ -42,19 +45,36 @@ const Login: React.FC = () => {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null); // Estado para el error visual
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null); // Limpiamos errores previos al intentar de nuevo
 
     try {
       const data = await authService.loginManual({ identifier, password });
       login(data);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Credenciales incorrectas";
-      alert(errorMessage);
+    } catch (error: unknown) {
+      // 1. Tipamos el error como el objeto que devuelve Axios/NestJS
+      const err = error as { 
+        response?: { 
+          data?: { 
+            message?: string 
+          } 
+        } 
+      };
+
+      const serverCode = err.response?.data?.message;
+      
+      // 3. Mapeamos a la traducción
+      const translatedMessage = t(`auth.errors.${serverCode}`, { 
+        defaultValue: t("auth.login.error_default") 
+      });
+
+      setErrorMsg(translatedMessage);
     } finally {
       setLoading(false);
     }
@@ -68,13 +88,22 @@ const Login: React.FC = () => {
 
         <div className="login-card">
           <h1 className="login-logo">LYNKN</h1>
-          <p className="login-subtitle">Acceso exclusivo al círculo.</p>
+          <p className="login-subtitle">{t('auth.login.subtitle')}</p>
 
           <form onSubmit={handleSubmit} className="login-form">
+            
+            {/* BLOQUE DE ERROR VISUAL */}
+            {errorMsg && (
+              <div className="nomad-ui-error animate-in" style={{ marginBottom: '1.5rem' }}>
+                <AlertCircle size={16} />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             <div className="form-group-login">
               <input
                 type="text"
-                placeholder="EMAIL O USUARIO"
+                placeholder={t('auth.login.identifier_placeholder')}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
@@ -83,7 +112,7 @@ const Login: React.FC = () => {
             <div className="form-group-login">
               <input
                 type="password"
-                placeholder="CONTRASEÑA"
+                placeholder={t('auth.login.password_placeholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -94,11 +123,11 @@ const Login: React.FC = () => {
               className="btn-login-submit"
               disabled={loading}
             >
-              {loading ? "VERIFICANDO..." : "ENTRAR"}
+              {loading ? t('auth.login.btn_verifying') : t('auth.login.submit')}
             </button>
 
             <div className="login-separator">
-              <span>O</span>
+              <span>{t('common.or') || 'O'}</span>
             </div>
 
             <div className="google-wrapper">
@@ -107,9 +136,9 @@ const Login: React.FC = () => {
           </form>
 
           <div className="login-footer">
-            <span>¿Aún no eres miembro?</span>
+            <span>{t('auth.login.no_account')}</span>
             <Link to="/register" className="link-to-register">
-              SOLICITA ACCESO
+              {t('auth.login.link_register')}
             </Link>
           </div>
         </div>

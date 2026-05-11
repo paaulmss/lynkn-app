@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { 
   Clock, 
   CheckCircle2, 
@@ -7,11 +8,19 @@ import {
   Calendar,
   Loader2,
   Menu,
-  ClipboardList
+  ClipboardList,
+  AlertTriangle,
+  X
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import { useAuth } from "../../hooks/useAuth";
 import "./MyRequestsPage.css";
+
+// Interfaz para el modal
+interface ConfirmModalState {
+  isOpen: boolean;
+  requestId: number | null;
+}
 
 interface RequestItem {
   id: number;
@@ -30,10 +39,18 @@ interface RequestItem {
 
 const MyRequestsPage = () => {
   const { user, isSidebarOpen, toggleSidebar, setIsSidebarOpen } = useAuth();
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Nuevo estado para el modal personalizado
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
+    isOpen: false,
+    requestId: null
+  });
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+  const isDarkMode = localStorage.getItem("theme") !== "light";
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -53,9 +70,14 @@ const MyRequestsPage = () => {
     fetchRequests();
   }, [fetchRequests]);
 
-  const handleCancelRequest = async (participationId: number) => {
-    const confirmMsg = "¿Estás seguro de que quieres cancelar esta solicitud o abandonar el evento?";
-    if (!window.confirm(confirmMsg)) return;
+  // Función para abrir el modal en lugar del confirm()
+  const openConfirmModal = (id: number) => {
+    setConfirmModal({ isOpen: true, requestId: id });
+  };
+
+  const handleCancelRequest = async () => {
+    const participationId = confirmModal.requestId;
+    if (!participationId) return;
 
     try {
       const response = await fetch(`${apiUrl}/posts/participation/${participationId}`, {
@@ -64,6 +86,7 @@ const MyRequestsPage = () => {
 
       if (response.ok) {
         setRequests((prev) => prev.filter((r) => r.id !== participationId));
+        setConfirmModal({ isOpen: false, requestId: null });
       }
     } catch (error) {
       console.error("Error al cancelar:", error);
@@ -71,7 +94,7 @@ const MyRequestsPage = () => {
   };
 
   return (
-    <div className="explore-container">
+    <div className={`explore-container ${!isDarkMode ? 'light-mode' : ''}`}>
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -82,20 +105,20 @@ const MyRequestsPage = () => {
       <main className={`main-content ${isSidebarOpen ? "sidebar-active" : ""}`}>
         <header className="top-navbar">
           <button className="icon-btn menu-trigger" onClick={toggleSidebar}>
-            <Menu color="white" size={24} />
+            <Menu color={isDarkMode ? "white" : "black"} size={24} />
           </button>
-          <div className="navbar-page-title">MIS SOLICITUDES</div>
+          <div className="navbar-page-title">{t('requests.title')}</div>
         </header>
 
-        <div className="requests-page-wrapper">
+        <div className="requests-page-wrapper animate-in">
           <header className="requests-header">
-            <h1>MIS SOLICITUDES</h1>
-            <p>Gestiona tus inscripciones y estados de eventos</p>
+            <h1>{t('requests.title')}</h1>
+            <p>{t('requests.subtitle')}</p>
           </header>
 
           {loading ? (
             <div className="requests-loading">
-              <Loader2 className="spin" size={40} color="#00f2ff" />
+              <Loader2 className="spin" size={40} color="var(--neon-glow)" />
             </div>
           ) : requests.length > 0 ? (
             <div className="requests-grid">
@@ -114,21 +137,25 @@ const MyRequestsPage = () => {
                   <div className="request-content">
                     <div className="request-info">
                       <span className="request-organizer">
-                        Organizado por @{item.posts.users?.username || "usuario"}
+                        {t('requests.organized_by')} @{item.posts.users?.username || "usuario"}
                       </span>
                       <h3>{item.posts.title}</h3>
                       <div className="request-meta">
-                        <Calendar size={14} />
+                        <Calendar size={14} color="var(--text-muted)" />
                         <span>{new Date(item.posts.event_date).toLocaleDateString()}</span>
                       </div>
                     </div>
 
                     <button 
                       className="cancel-request-btn"
-                      onClick={() => handleCancelRequest(item.id)}
+                      onClick={() => openConfirmModal(item.id)} // Llamamos al modal
                     >
-                      <Trash2 size={18} />
-                      <span>{item.status === 'accepted' ? 'ABANDONAR' : 'CANCELAR'}</span>
+                      <Trash2 size={16} />
+                      <span>
+                        {item.status === 'accepted' 
+                          ? t('requests.btn_abandon') 
+                          : t('requests.btn_cancel')}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -136,13 +163,45 @@ const MyRequestsPage = () => {
             </div>
           ) : (
             <div className="requests-empty">
-              <ClipboardList size={60} style={{ opacity: 0.1, marginBottom: '20px' }} />
-              <h3>No tienes solicitudes activas</h3>
-              <p>Explora el mapa y únete a nuevas experiencias.</p>
+              <ClipboardList size={60} color="var(--text-muted)" style={{ opacity: 0.2, marginBottom: '20px' }} />
+              <h3>{t('requests.empty_title')}</h3>
+              <p>{t('requests.empty_desc')}</p>
             </div>
           )}
         </div>
       </main>
+
+      {/* MODAL DE CONFIRMACIÓN PERSONALIZADO */}
+      {confirmModal.isOpen && (
+        <div className="custom-modal-overlay" onClick={() => setConfirmModal({ isOpen: false, requestId: null })}>
+          <div className="custom-confirm-card animate-in" onClick={(e) => e.stopPropagation()}>
+            <button className="close-modal-btn" onClick={() => setConfirmModal({ isOpen: false, requestId: null })}>
+              <X size={20} />
+            </button>
+            
+            <div className="modal-icon-warning">
+              <AlertTriangle size={48} color="#ef4444" />
+            </div>
+
+            <p>{t('requests.confirm_cancel')}</p>
+
+            <div className="modal-actions-row">
+              <button 
+                className="btn-modal-secondary" 
+                onClick={() => setConfirmModal({ isOpen: false, requestId: null })}
+              >
+                {t('common.cancel')}
+              </button>
+              <button 
+                className="btn-modal-danger" 
+                onClick={handleCancelRequest}
+              >
+                {t('common.delete') || 'CONFIRMAR'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -60,23 +60,23 @@ export class UsersService {
     return data;
   }
 
-async updateStatus(id: number, status: string, selfieBase64?: string, adminMessage?: string): Promise<void> {
-  const updateData: any = { 
-    status_verif: status,
-    verif_message: adminMessage
-  };
-  
-  if (selfieBase64) {
-    updateData.selfie_real_time = selfieBase64;
+  async updateStatus(id: number, status: string, selfieBase64?: string, adminMessage?: string): Promise<void> {
+    const updateData: any = {
+      status_verif: status,
+      verif_message: adminMessage
+    };
+
+    if (selfieBase64) {
+      updateData.selfie_real_time = selfieBase64;
+    }
+
+    const { error } = await this.supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) throw error;
   }
-
-  const { error } = await this.supabase
-    .from('users')
-    .update(updateData)
-    .eq('id', id);
-
-  if (error) throw error;
-}
 
   // Buscar usuarios aprobados para el mapa
   async findApproved() {
@@ -105,7 +105,7 @@ async updateStatus(id: number, status: string, selfieBase64?: string, adminMessa
       .select('*')
       .eq('username', username.toLowerCase())
       .single();
-    
+
     if (error && error.code !== 'PGRST116') return null;
     return data;
   }
@@ -137,4 +137,39 @@ async updateStatus(id: number, status: string, selfieBase64?: string, adminMessa
     if (error) throw new InternalServerErrorException(error.message);
     return data;
   }
+
+  async updatePreferences(userId: number, theme: string, language: string) {
+  const { data, error } = await this.supabase
+    .from("users")
+    .update({ theme, language })
+    .eq("id", userId)
+    .select()
+    .single();
+
+  if (error) throw new InternalServerErrorException(error.message);
+  return data;
+}
+
+  async deleteAccount(userId: number): Promise<void> {
+  const { error: postError } = await this.supabase
+    .from('posts')
+    .delete()
+    .eq('user_id', userId);
+  if (postError) throw postError;
+
+  await this.supabase.from('messages').delete().eq('sender_id', userId);
+  await this.supabase.from('chats').delete().eq('user_id', userId);
+
+  await this.supabase.from('notifications').delete().eq('user_id', userId);
+
+  const { error: userError } = await this.supabase
+    .from('users')
+    .delete()
+    .eq('id', userId);
+
+  if (userError) {
+    console.error('Error al borrar usuario:', userError.message);
+    throw userError;
+  }
+}
 }

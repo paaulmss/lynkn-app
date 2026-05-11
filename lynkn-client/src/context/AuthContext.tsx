@@ -5,6 +5,8 @@ export interface User {
   id: string | number;
   email: string;
   username: string;
+  theme: 'light' | 'dark';
+  language: 'es' | 'en';
   role: 'admin' | 'user';
   status_verif: 'pending' | 'approved' | 'rejected' | 'unverified'; 
   foto_perfil: string; 
@@ -15,6 +17,7 @@ export interface User {
 
 export interface AuthContextType {
   user: User | null;
+  updatePreferences: (theme: string, lang: string) => Promise<void>;
   token: string | null;
   login: (data: { access_token: string; user: User }) => void;
   logout: () => void;

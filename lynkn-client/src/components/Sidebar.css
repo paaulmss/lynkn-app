@@ -5,12 +5,18 @@
   left: 0;
   width: 280px; 
   height: 100vh;
-  background-color: #000;
-  border-right: 1px solid #1f1f1f;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border);
   z-index: 5000;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+}
+
+body.light-mode .top-navbar {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid #e4e4e7;
+  backdrop-filter: blur(10px);
 }
 
 .sidebar-component.closed { transform: translateX(-100%); }
@@ -27,24 +33,78 @@
   transition: all 0.3s ease;
 }
 
+/* Sidebar Modo Claro */
+.sidebar-component.light-mode {
+  background: #ffffff;
+  border-right: 1px solid #e4e4e7;
+}
+
+.sidebar-component.light-mode .logo-text {
+  color: #000;
+}
+
+.sidebar-component.light-mode .group-title {
+  color: #a1a1aa;
+}
+
+.sidebar-component.light-mode .sidebar-item {
+  color: #3f3f46;
+}
+
+.sidebar-component.light-mode .sidebar-item:hover {
+  background: #f4f4f5;
+  color: #000;
+}
+
+.sidebar-component.light-mode .sidebar-item.active {
+  background: #000;
+  color: #fff;
+}
+
+.sidebar-component.light-mode .sidebar-item.active svg {
+  color: #fff;
+}
+
+.sidebar-component.light-mode .sidebar-item.accent {
+  background: var(--neon-glow);
+  color: #000;
+  font-weight: 800;
+}
+
+.sidebar-component.light-mode .logout-btn {
+  color: #ef4444;
+  border-top: 1px solid #e4e4e7;
+}
+
 .sidebar-overlay.show { opacity: 1; visibility: visible; }
 
-/* --- HEADER SINCRONIZADO --- */
+/* --- HEADER --- */
 .sidebar-header {
   height: 70px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 24px;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--border);
   box-sizing: border-box;
 }
 
-.sidebar-header h2 {
+.logo-text {
   font-size: 1.1rem;
   margin: 0;
   color: #00f2ff;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  font-weight: 900;
+}
+
+.close-sidebar-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--text-main);
 }
 
 /* --- NAVEGACION --- */
@@ -60,7 +120,7 @@
 
 .group-title {
   font-size: 10px;
-  color: #444;
+  color: var(--text-muted);
   letter-spacing: 2px;
   padding-left: 12px;
   margin-bottom: 15px;
@@ -73,7 +133,7 @@
   align-items: center;
   gap: 15px;
   padding: 12px 16px;
-  color: #888;
+  color: var(--text-muted);
   text-decoration: none;
   border-radius: 12px;
   transition: 0.2s;
@@ -88,23 +148,25 @@
 }
 
 .sidebar-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--bg-input);
+  color: var(--text-main);
 }
 
 .sidebar-item.active {
-  background: rgba(0, 255, 255, 0.1);
-  color: #00ffff;
+  background: rgba(0, 242, 255, 0.1);
+  color: #00f2ff;
 }
 
-/* Boton Nuevo Post*/
+/* Boton Nuevo Post (Accent) */
 .sidebar-item.accent {
-  background: #fff;
-  color: #000;
+  background: var(--text-main);
+  color: var(--bg-dark);
   margin-top: 10px;
 }
 
-.sidebar-item.accent:hover { background: #e4e4e7; }
+.sidebar-item.accent:hover { 
+  opacity: 0.85; 
+}
 
 /* --- BADGES --- */
 .icon-with-badge {
@@ -117,7 +179,7 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  background-color: #ff4757;
+  background-color: #ef4444;
   color: white;
   font-size: 9px;
   font-weight: 800;
@@ -127,14 +189,14 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 2px solid #000;
+  border: 2px solid var(--bg-surface);
 }
 
 /* --- FOOTER --- */
 .sidebar-footer {
   margin-top: auto; 
   padding: 20px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--border);
 }
 
 .logout-btn {
@@ -146,15 +208,15 @@
   background: transparent;
   border: none;
   border-radius: 12px;
-  color: #888;
+  color: var(--text-muted);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .logout-btn:hover {
-  background: rgba(255, 68, 68, 0.1) !important;
-  color: #ff4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
 }
 
 @media (min-width: 1024px) {

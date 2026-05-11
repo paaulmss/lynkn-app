@@ -1,126 +1,51 @@
+/* ==========================================================================
+   TARJETA DE NOTIFICACION
+   ========================================================================== */
 .notif-card {
   display: flex;
   align-items: flex-start;
   gap: 16px;
   padding: 20px;
-  background: #050505;
-  border: 1px solid #111;
-  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   transition: all 0.3s ease;
   margin-bottom: 12px;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+body.light-mode .notif-card {
+  background: #ffffff;
 }
 
 .notif-card:hover {
-  border-color: #333;
-  background: #0a0a0a;
+  border-color: var(--text-muted);
+  background: var(--bg-input);
   transform: translateY(-2px);
 }
 
 .notif-card.unread {
-  border-left: 3px solid #00ffff;
-  background: rgba(0, 255, 255, 0.02);
+  border-left: 4px solid var(--neon-glow);
+  background: var(--bg-input);
 }
 
-.notif-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: #111;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-
-.notif-content {
-  flex: 1;
-}
-
-.notif-content p {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #a1a1aa;
-  line-height: 1.5;
-}
-
-.notif-content b {
-  color: #fff;
-  font-weight: 700;
-}
-
-.notif-time {
-  display: block;
-  font-size: 0.75rem;
-  color: #52525b;
-  margin-top: 8px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
+/* --- INDICADOR NO LEIDO --- */
 .notif-dot {
   width: 8px;
   height: 8px;
-  background: #00ffff;
+  background: var(--neon-glow);
   border-radius: 50%;
   position: absolute;
   top: 20px;
   right: 20px;
-  box-shadow: 0 0 10px #00ffff;
+  box-shadow: 0 0 10px var(--neon-glow);
 }
 
-.notif-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.btn-approve-notif, .btn-reject-notif {
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-}
-
-/* Botón Aceptar*/
-.btn-approve-notif {
-  background: #00ff88;
-  color: #000;
-}
-
-.btn-approve-notif:hover {
-  background: #00ffcc;
-  transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-}
-
-/* Botón Rechazar*/
-.btn-reject-notif {
-  background: #111;
-  color: #ef4444;
-  border: 1px solid #333;
-}
-
-.btn-reject-notif:hover {
-  background: #1a1a1a;
-  border-color: #ef4444;
-  transform: scale(1.05);
-}
-
-.notif-card.read .btn-reject-notif {
-  opacity: 0.7;
-}
-
-
+/* ==========================================================================
+   AVATAR Y BADGES
+   ========================================================================== */
 .notif-avatar-container {
   position: relative;
   width: 50px;
@@ -133,7 +58,8 @@
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #111;
+  border: 2px solid var(--border);
+  background: var(--bg-input);
 }
 
 .notif-type-badge {
@@ -146,15 +72,84 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #050505;
+  border: 2px solid var(--bg-surface);
 }
 
-.notif-type-badge.join_request { background: #00ffff; color: #000; }
-.notif-type-badge.accepted { background: #22c55e; color: #000; }
-.notif-type-badge.rejected { background: #ef4444; color: #fff; }
-.notif-type-badge.info_pending { background: #71717a; color: #fff; }
+body.light-mode .notif-type-badge {
+  border-color: #ffffff;
+}
 
+
+
+/* Colores de badges */
+.notif-type-badge.join_request { background: #00f2ff; color: #000; }
+.notif-type-badge.accepted { background: #22c55e; color: #fff; }
+.notif-type-badge.rejected, .notif-type-badge.kicked { background: #ef4444; color: #fff; }
+.notif-type-badge.post_deleted { background: #f59e0b; color: #fff; }
+
+/* ==========================================================================
+   CONTENIDO Y TEXTO
+   ========================================================================== */
 .notif-content {
   flex: 1;
   padding-top: 2px;
+}
+
+.notif-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.notif-content b {
+  color: var(--text-main);
+  font-weight: 800;
+}
+
+.notif-time {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   BOTONES DE ACCION
+   ========================================================================== */
+.notif-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn-approve-notif {
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.btn-reject-notif {
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.btn-reject-notif:hover {
+  border-color: #ef4444;
+  color: #ef4444;
 }

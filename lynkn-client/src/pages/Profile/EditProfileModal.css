@@ -1,3 +1,6 @@
+/* ==========================================================================
+   OVERLAY Y CONTENEDOR
+   ========================================================================== */
 .modal-overlay.blur {
   position: fixed;
   inset: 0;
@@ -8,22 +11,32 @@
   align-items: center;
   z-index: 5000;
   padding: 20px;
+  transition: background-color 0.3s ease;
+}
+
+body.light-mode .modal-overlay.blur {
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .edit-modal-content {
-  background: #0a0a0a;
+  background: var(--bg-surface);
   width: 100%;
   max-width: 420px;
-  border: 1px solid #1a1a1a;
+  border: 1px solid var(--border);
   border-radius: 28px;
   padding: 25px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--card-shadow);
   animation: modalPopUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   
   max-height: 90vh;    
   overflow-y: auto;   
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease;
+}
+
+body.light-mode .edit-modal-content {
+  background: #ffffff;
 }
 
 .edit-modal-content::-webkit-scrollbar {
@@ -31,7 +44,7 @@
 }
 
 .edit-modal-content::-webkit-scrollbar-thumb {
-  background: #333;
+  background: var(--border);
   border-radius: 10px;
 }
 
@@ -46,9 +59,9 @@
 }
 
 .edit-modal-header h3 {
-  color: #fff;
+  color: var(--text-main);
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 2px;
   margin: 0;
   text-transform: uppercase;
@@ -61,14 +74,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s;
+  transition: transform 0.2s ease;
   padding: 5px;
 }
 
 .close-btn:hover {
-  opacity: 0.7;
+  transform: scale(1.1);
 }
 
+/* ==========================================================================
+   AVATAR SECTION
+   ========================================================================== */
 .edit-avatar-section {
   display: flex;
   flex-direction: column;
@@ -77,19 +93,15 @@
 }  
 
 .avatar-preview-wrapper {
-  width: 90px;
-  height: 90px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  border: 2px solid #222;
+  border: 2px solid var(--neon-glow);
   transition: all 0.3s ease;
-}
-
-.avatar-preview-wrapper:hover {
-  border-color: #00ffff;
-  transform: scale(1.02);
+  box-shadow: 0 0 15px var(--neon-glow-soft);
 }
 
 .avatar-preview-img {
@@ -101,7 +113,7 @@
 .avatar-overlay-icon {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -116,44 +128,35 @@
 .change-photo-btn {
   background: transparent;
   border: none;
-  color: #00ffff;
+  color: var(--neon-glow);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 800;
   margin-top: 12px;
   cursor: pointer;
   letter-spacing: 1px;
 }
 
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+/* ==========================================================================
+   FORMULARIO
+   ========================================================================== */
 .form-group label {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: #444;
+  color: var(--text-muted);
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  margin-bottom: 5px;
 }
 
 .form-group input,
 .form-group textarea {
-  background: #121212;
-  border: 1px solid #222;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 14px;
-  color: #fff;
+  color: var(--text-main) !important;
   padding: 14px;
   font-family: inherit;
   font-size: 0.9rem;
@@ -167,49 +170,48 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #333;
-  background: #161616;
+  border-color: var(--text-muted) !important;
 }
 
 .char-count {
   display: block;
   text-align: right;
-  color: #555;
-  font-size: 0.7rem;
-  margin-top: -10px;
-  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-top: 4px;
 }
 
 /* ==========================================================================
-   BOTONES DE ACCIÓN
+   BOTONES DE ACCION
    ========================================================================== */
 .modal-actions {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .cancel-btn {
+  flex: 1;
   background: transparent;
-  border: none;
-  color: #888;
+  border: 1px solid var(--border);
+  color: var(--text-main);
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 8px;
-  transition: color 0.2s;
+  border-radius: 12px;
+  padding: 14px;
+  transition: all 0.2s;
 }
 
 .cancel-btn:hover {
-  color: #fff;
+  background: var(--bg-input);
 }
 
 .save-btn {
-  background: #fff;
-  color: #000;
+  flex: 2;
+  background: var(--text-main);
+  color: var(--bg-dark);
   border: none;
   border-radius: 14px;
   padding: 16px;
@@ -218,29 +220,20 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .save-btn:hover:not(:disabled) {
-  background: #e4e4e7;
+  opacity: 0.9;
   transform: translateY(-2px);
 }
 
 .save-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  filter: grayscale(1);
 }
 
-/* ==========================================================================
-   ANIMACIONES
-   ========================================================================== */
 @keyframes modalPopUp {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }

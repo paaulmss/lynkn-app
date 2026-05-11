@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { Menu, BellOff } from "lucide-react";
 import NotificationItem from "./NotificationItem";
@@ -22,59 +23,44 @@ interface Notification {
 
 const NotificationsPage = () => {
   const { user, isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useAuth();
+  const { t } = useTranslation();
   
-  // ESTADOS
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
-  /**
-   * 1. MARCAR COMO LEÍDAS
-   * Al entrar en la página, notificamos al servidor que el usuario ha visto los avisos.
-   */
- const markAllAsRead = useCallback(async () => {
-  try {
-    if (!user?.id) return;
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-    await fetch(
-      `${apiUrl}/notifications/user/${user.id}/mark-read`,
-      { method: "PATCH" }
-    );
-  } catch (err) {
-    console.error("Error al marcar como leídas:", err);
-  }
-}, [user?.id]);
+  const isDarkMode = localStorage.getItem("theme") !== "light";
 
-  /**
-   * 2. CARGAR NOTIFICACIONES
-   * Trae el historial de notificaciones. 
-   */
-  const fetchNotifications = useCallback(async () => {
-  try {
-    if (!user?.id) return;
-
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-    const response = await fetch(
-      `${apiUrl}/notifications/user/${user.id}`
-    );
-    const data = await response.json();
-
-    setNotifications(data || []);
-
-    if (data && data.length > 0) {
-      markAllAsRead();
+  const markAllAsRead = useCallback(async () => {
+    try {
+      if (!user?.id) return;
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      await fetch(
+        `${apiUrl}/notifications/user/${user.id}/mark-read`,
+        { method: "PATCH" }
+      );
+    } catch (err) {
+      console.error("Error al marcar como leídas:", err);
     }
-  } catch (error) {
-    console.error("Error cargando notificaciones:", error);
-  } finally {
-    setLoading(false);
-  }
-}, [user?.id, markAllAsRead]);
+  }, [user?.id]);
 
-  /**
-   * EFECTO DE ARRANQUE
-   * Carga las notificaciones en cuanto el usuario está disponible.
-   */
+  const fetchNotifications = useCallback(async () => {
+    try {
+      if (!user?.id) return;
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      const response = await fetch(`${apiUrl}/notifications/user/${user.id}`);
+      const data = await response.json();
+      setNotifications(data || []);
+      if (data && data.length > 0) {
+        markAllAsRead();
+      }
+    } catch (error) {
+      console.error("Error cargando notificaciones:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, markAllAsRead]);
+
   useEffect(() => {
     if (user?.id) {
       fetchNotifications();
@@ -82,7 +68,7 @@ const NotificationsPage = () => {
   }, [user?.id, fetchNotifications]);
 
   return (
-    <div className="explore-container">
+    <div className={`explore-container ${!isDarkMode ? 'light-mode' : ''}`}>
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -93,28 +79,22 @@ const NotificationsPage = () => {
       <main className={`main-content ${isSidebarOpen ? "sidebar-active" : ""}`}>
         
         <header className="top-navbar">
-          <button
-            className="icon-btn menu-trigger"
-            onClick={toggleSidebar}
-            type="button"
-          >
-            <Menu color="white" size={24} />
+          <button className="icon-btn menu-trigger" onClick={toggleSidebar} type="button">
+            <Menu color={isDarkMode ? "white" : "black"} size={24} />
           </button>
-          <div className="navbar-page-title">NOTIFICACIONES</div>
+          <div className="navbar-page-title">{t('notifications.nav_title')}</div>
         </header>
 
-        <div className="notifications-page-content">
+        <div className="notifications-page-content animate-in">
           <header className="page-header">
-            <h1 className="page-title">CENTRO DE NOTIFICACIONES</h1>
-            <p className="page-subtitle">
-              Gestiona tus solicitudes y actividad reciente
-            </p>
+            <h1 className="page-title">{t('notifications.title')}</h1>
+            <p className="page-subtitle">{t('notifications.subtitle')}</p>
           </header>
 
           <div className="notifications-container">
             {loading ? (
               <div className="loading-state">
-                <div className="loader-dots">Cargando avisos...</div>
+                <div className="loader-dots">{t('notifications.loading')}</div>
               </div>
             ) : notifications.length > 0 ? (
               notifications.map((notif) => (
@@ -126,13 +106,10 @@ const NotificationsPage = () => {
             ) : (
               <div className="notif-empty-container">
                 <div className="notif-empty-icon-circle">
-                  <BellOff size={48} strokeWidth={1} color="#3f3f46" />
+                  <BellOff size={48} strokeWidth={1} color="var(--text-muted)" />
                 </div>
-                <h2>BANDEJA VACÍA</h2>
-                <p>
-                  Te avisaremos cuando alguien quiera unirse a tus planes o
-                  tengas actividad nueva.
-                </p>
+                <h2>{t('notifications.empty_title')}</h2>
+                <p>{t('notifications.empty_desc')}</p>
               </div>
             )}
           </div>

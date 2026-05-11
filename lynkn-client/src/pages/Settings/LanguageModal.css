@@ -1,0 +1,66 @@
+.language-modal-content {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  width: 90%;
+  max-width: 400px;
+  border-radius: 24px;
+  padding: 30px;
+  box-shadow: var(--card-shadow);
+}
+
+body.light-mode .language-modal-content { background: #ffffff; }
+
+.language-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.language-modal-header h3 {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--text-main);
+}
+
+.languages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.language-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+}
+
+.language-item:hover {
+  background: var(--border);
+  transform: translateX(5px);
+}
+
+.language-item.active {
+  border-color: var(--neon-glow);
+  background: rgba(0, 242, 255, 0.05);
+}
+
+.lang-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.lang-flag { font-size: 1.2rem; }
+.lang-name { 
+  font-size: 0.95rem; 
+  font-weight: 600; 
+  color: var(--text-main);
+}

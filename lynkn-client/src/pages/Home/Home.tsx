@@ -5,6 +5,8 @@ import './Home.css';
 const Home: React.FC = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const isDarkMode = localStorage.getItem("theme") !== "light";
 
   useEffect(() => {
     const container = containerRef.current;
@@ -48,7 +50,7 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <div className="home-container" ref={containerRef}>
+    <div className={`home-container ${!isDarkMode ? 'light-mode' : ''}`} ref={containerRef}>
       <section className="hero-section">
         <div className="hero-bg-wrapper" ref={heroRef}></div>
         <div className="hero-overlay">
@@ -72,21 +74,21 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      <section className="manifesto-section">
+      <section className="manifesto-section themed">
         <div className="manifesto-content reveal">
           <p>Creemos que los mejores <br /> momentos de la vida ocurren</p>
           <h3 className="highlight">fuera de la pantalla.</h3>
         </div>
       </section>
 
-      <section className="manifesto-section">
+      <section className="manifesto-section themed">
         <div className="manifesto-content reveal">
           <p>Filtramos</p>
           <h3 className="highlight">para que no <br /> pierdas el tiempo.</h3>
         </div>
       </section>
 
-      <footer className="home-footer">
+      <footer className="home-footer themed">
         <div className="footer-logo reveal">LYNKN</div>
         <div className="footer-links reveal">
           <a href="#">LEGAL NOTICE</a>

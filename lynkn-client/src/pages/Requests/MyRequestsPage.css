@@ -1,3 +1,6 @@
+/* ==========================================================================
+    LAYOUT Y CABECERA
+   ========================================================================== */
 .requests-page-wrapper {
   padding: 40px;
   max-width: 1100px;
@@ -14,30 +17,40 @@
   letter-spacing: 8px;
   font-weight: 900;
   margin-bottom: 8px;
-  color: #fff;
+  color: var(--text-main);
 }
 
 .requests-header p {
-  color: #555;
+  color: var(--text-muted);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-/* GRID */
+/* ==========================================================================
+    GRID Y TARJETAS
+   ========================================================================== */
 .requests-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  gap: 25px;
 }
 
-/* CARDS */
 .request-card {
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: transform 0.3s ease;
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+body.light-mode .request-card {
+  background: #ffffff;
+}
+
+.request-card:hover {
+  transform: translateY(-5px);
 }
 
 /* COLORES SEGUN ESTADO */
@@ -45,18 +58,23 @@
 .request-card.accepted { border-left: 4px solid #22c55e; }
 .request-card.rejected { border-left: 4px solid #ef4444; }
 
+/* IMAGEN */
 .request-image-wrapper {
   position: relative;
   height: 160px;
+  background: #000;
 }
 
 .request-image-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.6;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
 }
 
+
+/* BADGE FLOTANTE */
 .status-badge-floating {
   position: absolute;
   top: 15px;
@@ -70,12 +88,16 @@
   font-weight: 900;
   letter-spacing: 1px;
   backdrop-filter: blur(10px);
+  z-index: 2;
 }
 
-.status-badge-floating.pending { background: rgba(113, 113, 122, 0.2); color: #a1a1aa; }
-.status-badge-floating.accepted { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-.status-badge-floating.rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.status-badge-floating.pending { background: rgba(113, 113, 122, 0.3); color: #fff; }
+.status-badge-floating.accepted { background: rgba(34, 197, 94, 0.4); color: #fff; }
+.status-badge-floating.rejected { background: rgba(239, 68, 68, 0.4); color: #fff; }
 
+/* ==========================================================================
+    CONTENIDO DE LA TARJETA
+   ========================================================================== */
 .request-content {
   padding: 20px;
   display: flex;
@@ -84,34 +106,37 @@
   min-height: 160px;
 }
 
-.request-info h3 {
-  margin: 10px 0;
-  font-size: 1.1rem;
-  color: #fff;
+.request-organizer {
+  color: var(--neon-glow);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+  display: block;
 }
 
-.request-category {
-  font-size: 0.65rem;
-  color: #00f2ff;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+.request-info h3 {
+  margin: 5px 0 15px 0;
+  font-size: 1.1rem;
+  color: var(--text-main);
+  font-weight: 800;
 }
 
 .request-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #444;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
-/* BOTON ACCION */
+/* BOTON ACCION (CANCELAR/ABANDONAR) */
 .cancel-request-btn {
   margin-top: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  color: #555;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -119,30 +144,154 @@
   padding: 12px;
   border-radius: 12px;
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.75rem;
-  transition: all 0.2s;
+  font-weight: 800;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
 }
 
 .cancel-request-btn:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.2);
+  transform: scale(1.02);
 }
 
+/* ESTADOS DE CARGA Y VACIO */
 .requests-loading, .requests-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 100px 0;
-  color: #333;
+  padding: 120px 0;
+  text-align: center;
 }
 
-.request-organizer {
-  color: #00f2ff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.requests-empty h3 {
+  color: var(--text-main);
+  margin-top: 15px;
+}
+
+.requests-empty p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.custom-confirm-card {
+    background: #0a0a0a;
+    border: 1px solid #1f1f1f;
+    padding: 2.5rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: #52525b;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+    color: white;
+}
+
+.modal-icon-warning {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.custom-confirm-card h3 {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    letter-spacing: 1px;
+}
+
+.custom-confirm-card p {
+    color: #a1a1aa;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 2rem;
+}
+
+.modal-actions-row {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-modal-secondary {
+    flex: 1;
+    background: #1f1f23;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-modal-secondary:hover {
+    background: #2d2d33;
+}
+
+.btn-modal-danger {
+    flex: 1;
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-modal-danger:hover {
+    opacity: 0.9;
+}
+
+/* Modo Claro para el modal */
+.light-mode .custom-confirm-card {
+    background: white;
+    border-color: #e4e4e7;
+}
+
+.light-mode .custom-confirm-card h3 {
+    color: black;
+}
+
+.light-mode .custom-confirm-card p {
+    color: #3f3f46;
+}
+
+.light-mode .btn-modal-secondary {
+    background: #f4f4f5;
+    color: black;
 }

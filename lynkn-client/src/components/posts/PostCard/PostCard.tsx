@@ -1,5 +1,6 @@
 import React from "react";
 import { Heart, MessageCircle, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../hooks/useAuth"; 
 import "./PostCard.css";
 
@@ -22,6 +23,8 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, onClick }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
+
   const placeholderImg = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&auto=format&fit=crop';
   const finalSrc = post.image_url || placeholderImg;
   
@@ -58,12 +61,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onClick }) => {
       {post.userStatus && post.userStatus !== "available" && !isOwner && (
         <div className={`post-status-badge ${post.userStatus}`}>
           {renderStatusIcon()}
-          <span>{post.userStatus.toUpperCase()}</span>
+          <span>{t(`post_card.status.${post.userStatus}`)}</span>
         </div>
       )}
 
       {isUnlimited && (!post.userStatus || post.userStatus === "available") && !isOwner && (
-        <div className="unlimited-badge-mini">ILIMITADO</div>
+        <div className="unlimited-badge-mini">{t('post_card.unlimited')}</div>
       )}
 
       <div className="post-card-overlay">

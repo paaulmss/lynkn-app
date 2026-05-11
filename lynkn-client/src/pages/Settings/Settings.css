@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CONTENEDOR PRINCIPAL Y LAYOUT
+    CONTENEDOR PRINCIPAL Y LAYOUT
    ========================================================================== */
 .main-content {
   min-height: 100vh; 
@@ -10,13 +10,6 @@
   flex-direction: column;
 }
 
-.settings-page-main {
-  flex: 1;
-  transition: margin-left 0.3s ease;
-  min-height: 100vh;
-  background: #050505;
-}
-
 .settings-page-wrapper {
   padding: 40px;
   max-width: 900px;
@@ -25,7 +18,7 @@
 }
 
 /* ==========================================================================
-   CABECERA DE AJUSTES
+    CABECERA DE AJUSTES
    ========================================================================== */
 .settings-header {
   margin-bottom: 40px;
@@ -36,32 +29,37 @@
   letter-spacing: 8px;
   font-weight: 900;
   margin-bottom: 8px;
-  color: #fff;
+  color: var(--text-main);
 }
 
 .settings-header p {
-  color: #555;
+  color: var(--text-muted);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 /* ==========================================================================
-   TARJETAS Y GRID
+    TARJETAS Y GRID
    ========================================================================== */
 .settings-grid {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding-bottom: 100px; /* Espacio extra al final */
+  padding-bottom: 100px;
 }
 
 .settings-card {
-  background: #0a0a0a;
-  border: 1px solid #ffffff08;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 24px;
   transition: all 0.3s ease;
+  box-shadow: var(--card-shadow);
+}
+
+body.light-mode .settings-card {
+  background: #ffffff;
 }
 
 .card-header {
@@ -69,7 +67,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
-  color: #00f2ff;
+  color: var(--neon-glow);
 }
 
 .card-header span {
@@ -79,54 +77,122 @@
   text-transform: uppercase;
 }
 
+/* Cabecera de peligro */
+.card-header.danger {
+  color: #ef4444;
+}
+
+.danger-title {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.danger-description {
+  color: #ef4444;
+  opacity: 0.8;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  line-height: 1.4;
+  max-width: 80%;
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 /* ==========================================================================
-   ITEMS DE AJUSTES
+    ITEMS DE AJUSTES
    ========================================================================== */
 .settings-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 0;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--border);
+  gap: 20px;
 }
 
 .settings-item:last-child {
   border-bottom: none;
 }
 
-.settings-item.selectable {
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.settings-item.selectable:hover {
-  opacity: 0.7;
-}
-
 .item-info {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  flex: 1;
 }
 
 .item-info span {
   font-size: 0.95rem;
-  font-weight: 500;
-  color: #fff;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.2;
 }
 
 .item-info small {
-  color: #444;
-  font-size: 0.75rem;
-  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 /* ==========================================================================
-   INPUTS, SELECTS Y CONTROLES
+    SWITCH DE TEMA
+   ========================================================================== */
+.theme-switch {
+  width: 58px;
+  height: 30px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.theme-switch.active {
+  background: #f4f4f5;
+  border-color: #d4d4d8;
+}
+
+.switch-handle {
+  width: 22px;
+  height: 22px;
+  background: var(--text-main);
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.theme-switch.active .switch-handle {
+  transform: translateX(28px);
+  background: #ffffff;
+  color: #000;
+}
+
+/* ==========================================================================
+    INPUTS, SELECTS Y RANGE
    ========================================================================== */
 .settings-select {
-  background: #141414;
-  border: 1px solid #1f1f1f;
-  color: #fff;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-main);
   padding: 8px 12px;
   border-radius: 10px;
   font-size: 0.8rem;
@@ -135,67 +201,43 @@
 }
 
 .settings-range {
-  width: 150px;
-  accent-color: #00f2ff;
+  width: 160px;
+  margin-left: 10px;
+  accent-color: var(--neon-glow);
   cursor: pointer;
 }
 
-/* Badge de verificacion */
-.badge-verified {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 0.65rem;
-  font-weight: 900;
-  letter-spacing: 1px;
-}
-
 /* ==========================================================================
-   STATUS CUENTA
+    STATUS CUENTA
    ========================================================================== */
-
-   .status-container {
+.status-container {
   padding: 15px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  background: var(--bg-input);
   display: flex;
   flex-direction: column;
   gap: 15px;
-}
-
-.status-content {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.status-text {
-  display: flex;
-  flex-direction: column;
+  border-left: 4px solid transparent;
 }
 
 .status-title {
   font-weight: 900;
   font-size: 0.85rem;
   letter-spacing: 1px;
+  color: var(--text-main);
 }
 
-.status-text small {
-  font-size: 0.7rem;
-  color: #71717a;
-  margin-top: 2px;
-}
-
-.status-container.approved { border-left: 3px solid #00f2ff; }
-.status-container.pending { border-left: 3px solid #f59e0b; }
-.status-container.unverified { border-left: 3px solid #ef4444; }
+.status-container.approved { border-left-color: #00f2ff; }
+.status-container.pending { border-left-color: #f59e0b; }
+.status-container.unverified { border-left-color: #ef4444; }
+.status-container.rejected { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.05); }
 
 .verify-action-btn {
-  background: #fff;
-  color: #000;
+  background: var(--text-main);
+  color: var(--bg-dark);
   border: none;
   padding: 12px;
+  border-radius: 10px;
   font-weight: 900;
   font-size: 0.75rem;
   letter-spacing: 2px;
@@ -204,93 +246,57 @@
 }
 
 .verify-action-btn:hover {
-  background: #00f2ff;
-  box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
-}
-
-/* ==========================================================================
-   ESTADOS DE VERIFICACION (RECHAZADO)
-   ========================================================================== */
-
-.status-container.rejected {
-    border-left: 3px solid #ef4444;
-    background: rgba(239, 68, 68, 0.05);
-}
-
-.rejected-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-}
-
-.status-info-group {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+  opacity: 0.9;
+  box-shadow: 0 0 15px var(--neon-glow-soft);
 }
 
 .admin-note-settings {
-    background: rgba(0, 0, 0, 0.4);
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    position: relative;
-    overflow: hidden;
-}
-
-.admin-note-settings::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 3px;
-    background: #ef4444;
-}
-
-.admin-note-settings .note-label {
-    display: block;
-    font-size: 0.65rem;
-    font-weight: 900;
-    color: #ef4444;
-    margin-bottom: 6px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-}
-
-.admin-note-settings p {
-    font-size: 0.85rem;
-    color: #d1d1d6;
-    line-height: 1.4;
-    margin: 0;
-    font-style: italic;
-    font-family: inherit;
-}
-
-.status-container.rejected .verify-action-btn {
-    background: #ef4444;
-    color: #fff;
-    margin-top: 5px;
-}
-
-.status-container.rejected .verify-action-btn:hover {
-    background: #ff5a5a;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
-}
-
-.status-container.rejected .status-title {
-    color: #ef4444;
+  background: var(--bg-surface);
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #ef4444;
 }
 
 /* ==========================================================================
-   BOTON CERRAR SESION
+    ZONA DE PELIGRO
+   ========================================================================== */
+.danger-zone-card {
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  background: var(--bg-surface) !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.05);
+}
+
+body.light-mode .danger-zone-card {
+  background: #fff5f5 !important;
+}
+
+.delete-acc-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.delete-acc-btn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* ==========================================================================
+    BOTON CERRAR SESION
    ========================================================================== */
 .logout-full-btn {
   margin-top: 20px;
   background: transparent;
-  border: 1px solid #ff444433;
-  color: #ff4444;
+  border: 1px solid var(--border);
+  color: var(--text-main);
   padding: 20px;
   border-radius: 20px;
   display: flex;
@@ -306,26 +312,6 @@
 }
 
 .logout-full-btn:hover {
-  background: #ff4444;
-  color: white;
-  box-shadow: 0 10px 20px rgba(255, 68, 68, 0.2);
-}
-
-/* ==========================================================================
-   RESPONSIVE / SIDEBAR ACTIVE
-   ========================================================================== */
-@media (max-width: 768px) {
-  .settings-page-wrapper {
-    padding: 20px;
-  }
-  
-  .settings-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
-  
-  .settings-select, .settings-range {
-    width: 100%;
-  }
+  background: var(--text-main);
+  color: var(--bg-dark);
 }

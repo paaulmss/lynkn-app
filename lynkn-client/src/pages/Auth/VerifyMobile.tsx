@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
+import { useTranslation } from "react-i18next";
 
 interface ServerResponse {
   status: "ok" | "error";
@@ -8,10 +9,9 @@ interface ServerResponse {
 }
 
 const VerifyMobile: React.FC = () => {
+  const { t } = useTranslation();
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [status, setStatus] = useState<"idle" | "uploading" | "success">(
-    "idle",
-  );
+  const [status, setStatus] = useState<"idle" | "uploading" | "success">("idle");
 
   const SERVER_URL = "https://lynkn-backend.onrender.com";
 
@@ -60,7 +60,7 @@ const VerifyMobile: React.FC = () => {
               if (response?.status === "ok") {
                 setStatus("success");
               } else {
-                alert(response?.message || "Error de sincronización");
+                alert(response?.message || t("verify_mobile.err_sync"));
                 setStatus("idle");
               }
             },
@@ -110,8 +110,7 @@ const VerifyMobile: React.FC = () => {
                 letterSpacing: "0.1em",
               }}
             >
-              Captura un selfie para verificar tu identidad y acceder al
-              círculo.
+              {t("verify_mobile.desc")}
             </p>
             <label
               style={{
@@ -127,7 +126,7 @@ const VerifyMobile: React.FC = () => {
                 textAlign: "center",
               }}
             >
-              ABRIR CÁMARA
+              {t("verify_mobile.btn_open")}
               <input
                 type="file"
                 accept="image/*"
@@ -147,7 +146,7 @@ const VerifyMobile: React.FC = () => {
                 marginBottom: "10px",
               }}
             >
-              SUBIENDO VERIFICACIÓN...
+              {t("verify_mobile.uploading")}
             </p>
             <div
               style={{
@@ -172,7 +171,7 @@ const VerifyMobile: React.FC = () => {
                 marginBottom: "10px",
               }}
             >
-              ENVIADO
+              {t("verify_mobile.success_title")}
             </p>
             <p
               style={{
@@ -181,7 +180,7 @@ const VerifyMobile: React.FC = () => {
                 lineHeight: "1.4",
               }}
             >
-              Ya puedes cerrar esta ventana y continuar en tu ordenador.
+              {t("verify_mobile.success_desc")}
             </p>
           </div>
         )}

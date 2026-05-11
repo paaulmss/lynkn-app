@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Grid,
   Map as MapIcon,
@@ -40,6 +41,7 @@ export interface Post {
 
 const Profile = () => {
   const { user, isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useAuth();
+  const { t } = useTranslation();
 
   const [viewMode, setViewMode] = useState<"posts" | "map">("posts");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -49,6 +51,8 @@ const Profile = () => {
 
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isDarkMode = localStorage.getItem("theme") !== "light";
 
   useEffect(() => {
     const fetchMyPosts = async () => {
@@ -69,7 +73,7 @@ const Profile = () => {
   if (!user)
     return (
       <div className="loading-full">
-        <Loader2 className="spin" />
+        <Loader2 className="spin" color="var(--text-main)" />
       </div>
     );
 
@@ -82,7 +86,7 @@ const Profile = () => {
       setIsReverifyOpen(false);
       window.location.reload();
     } catch {
-      alert("Error al subir la verificación.");
+      alert(t('profile.upload_error'));
     }
   };
 
@@ -92,7 +96,7 @@ const Profile = () => {
   };
 
   return (
-    <div className="explore-container">
+    <div className={`explore-container ${!isDarkMode ? 'light-mode' : ''}`}>
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -102,42 +106,30 @@ const Profile = () => {
 
       <main className={`main-content ${isSidebarOpen ? "sidebar-active" : ""}`}>
         <header className="top-navbar">
-          <button
-            className="icon-btn menu-trigger"
-            onClick={toggleSidebar}
-            type="button"
-          >
-            <Menu color="white" size={24} />
+          <button className="icon-btn menu-trigger" onClick={toggleSidebar} type="button">
+            <Menu color={isDarkMode ? "white" : "black"} size={24} />
           </button>
-          <div className="navbar-page-title">MI PERFIL</div>
+          <div className="navbar-page-title">{t('nav.profile')}</div>
         </header>
 
         <div className="profile-page">
           <div className="profile-container">
             {user.status_verif === "rejected" && (
-              <div className="profile-rejected-banner">
+              <div className="profile-rejected-banner animate-in">
                 <ShieldAlert size={24} color="#ff4444" />
                 <div className="banner-text">
-                  <strong>VERIFICACIÓN RECHAZADA</strong>
-
+                  <strong>{t('profile.rejected_title')}</strong>
                   {user.verif_message ? (
                     <div className="admin-feedback-box">
-                      <p className="feedback-label">NOTA DEL ADMINISTRADOR:</p>
+                      <p className="feedback-label">{t('profile.admin_note')}</p>
                       <p className="feedback-content">"{user.verif_message}"</p>
                     </div>
                   ) : (
-                    <p>
-                      Tu identidad no pudo ser confirmada. Por favor, revisa tus
-                      fotos.
-                    </p>
+                    <p>{t('profile.rejected_desc')}</p>
                   )}
                 </div>
-
-                <button
-                  className="reverify-inline-btn"
-                  onClick={() => setIsReverifyOpen(true)}
-                >
-                  REINTENTAR VERIFICACIÓN
+                <button className="reverify-inline-btn" onClick={() => setIsReverifyOpen(true)}>
+                  {t('profile.retry')}
                 </button>
               </div>
             )}
@@ -158,70 +150,44 @@ const Profile = () => {
             <nav className="view-switcher">
               <button
                 className={`switch-btn ${viewMode === "posts" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("posts");
-                  setSelectedPost(null);
-                }}
+                onClick={() => { setViewMode("posts"); setSelectedPost(null); }}
               >
-                <Grid size={18} /> POSTS
+                <Grid size={18} /> {t('profile.view_posts')}
               </button>
               <button
                 className={`switch-btn ${viewMode === "map" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("map");
-                  setSelectedPost(null);
-                }}
+                onClick={() => { setViewMode("map"); setSelectedPost(null); }}
               >
-                <MapIcon size={18} /> MAPA
+                <MapIcon size={18} /> {t('profile.view_map')}
               </button>
             </nav>
 
             <section className="profile-content-area">
               {isLoading ? (
                 <div className="loading-posts">
-                  <Loader2 className="spin" />
+                  <Loader2 className="spin" color="var(--text-main)" />
                 </div>
               ) : userPosts.length > 0 ? (
                 viewMode === "posts" ? (
                   <div className="posts-grid">
                     {userPosts.map((post) => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        onClick={() => setSelectedPost(post)}
-                      />
+                      <PostCard key={post.id} post={post} onClick={() => setSelectedPost(post)} />
                     ))}
                   </div>
                 ) : (
                   <div className="profile-map-wrapper">
-                    <ProfileMap
-                      posts={userPosts}
-                      onMarkerClick={setSelectedPost}
-                    />
+                    <ProfileMap posts={userPosts} onMarkerClick={setSelectedPost} />
                     {selectedPost && (
-                      <div
-                        className="map-post-balloon-overlay"
-                        onClick={() => setSelectedPost(null)}
-                      >
-                        <div
-                          className="map-post-balloon"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            className="balloon-close"
-                            onClick={() => setSelectedPost(null)}
-                          >
+                      <div className="map-post-balloon-overlay" onClick={() => setSelectedPost(null)}>
+                        <div className="map-post-balloon" onClick={(e) => e.stopPropagation()}>
+                          <button className="balloon-close" onClick={() => setSelectedPost(null)}>
                             <X size={18} />
                           </button>
                           <div className="balloon-header">
                             <img src={user.foto_perfil} alt="avatar" />
                             <span>{user.username}</span>
                           </div>
-                          <img
-                            src={selectedPost.image_url}
-                            className="balloon-img"
-                            alt="post map"
-                          />
+                          <img src={selectedPost.image_url} className="balloon-img" alt="post map" />
                         </div>
                       </div>
                     )}
@@ -229,9 +195,9 @@ const Profile = () => {
                 )
               ) : (
                 <div className="empty-posts-state">
-                  <Camera size={48} />
-                  <h2>Aún no hay publicaciones</h2>
-                  <p>Tus capturas aparecerán aquí.</p>
+                  <Camera size={48} color="var(--text-muted)" />
+                  <h2>{t('profile.empty_posts')}</h2>
+                  <p>{t('profile.empty_posts_desc')}</p>
                 </div>
               )}
             </section>

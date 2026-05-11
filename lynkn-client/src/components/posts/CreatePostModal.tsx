@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { toast } from "sonner";
@@ -29,7 +30,8 @@ interface CreatePostProps {
 
 const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   const { user } = useAuth();
-  
+  const { t } = useTranslation();
+
   // Lógica de bloqueo de seguridad
   const isLocked = user?.role !== "admin" && user?.status_verif !== "approved";
 
@@ -59,6 +61,8 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   const miniMap = useRef<maplibregl.Map | null>(null);
   const miniMarker = useRef<maplibregl.Marker | null>(null);
 
+  const isDarkMode = localStorage.getItem("theme") !== "light";
+
   useEffect(() => {
     if ("geolocation" in navigator) {
       setIsLocating(true);
@@ -77,9 +81,11 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
 
   useEffect(() => {
     if (showMiniMap && miniMapContainer.current && !miniMap.current) {
+      const styleName = isDarkMode ? "alidade_smooth_dark" : "alidade_smooth";
+
       miniMap.current = new maplibregl.Map({
         container: miniMapContainer.current,
-        style: `https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json?api_key=${import.meta.env.VITE_STADIA_API_KEY}`,
+        style: `https://tiles.stadiamaps.com/styles/${styleName}.json?api_key=${import.meta.env.VITE_STADIA_API_KEY}`,
         center: [location.lng, location.lat],
         zoom: 14,
         attributionControl: false,
@@ -94,12 +100,17 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         setLocation({ lat, lng });
         miniMarker.current?.setLngLat([lng, lat]);
       });
+
+      setTimeout(() => miniMap.current?.resize(), 100);
     }
-    if (!showMiniMap && miniMap.current) {
-      miniMap.current.remove();
-      miniMap.current = null;
-    }
-  }, [location.lat, location.lng, showMiniMap]);
+
+    return () => {
+      if (!showMiniMap && miniMap.current) {
+        miniMap.current.remove();
+        miniMap.current = null;
+      }
+    };
+  }, [showMiniMap, isDarkMode, location.lat, location.lng]);
 
   const handleSearchLocation = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -119,7 +130,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         miniMarker.current?.setLngLat([coords.lng, coords.lat]);
       }
     } catch (err) {
-      console.error("Error buscando:", err);
+      console.error("Error buscando ubicación:", err);
     }
   };
 
@@ -128,8 +139,8 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 3 * 1024 * 1024) {
-        toast.error("Imagen demasiado pesada", {
-          description: "El límite es de 3MB para permitir la validación por IA.",
+        toast.error(t("create_post.err_size"), {
+          description: t("create_post.err_size_desc"),
         });
         return;
       }
@@ -147,15 +158,15 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
     const TOAST_ID = "post-upload";
 
     if (!isUnlimited && (!maxParticipants || maxParticipants <= 0)) {
-      toast.warning("Define el aforo", {
-        description: "Si no es ilimitado, debes indicar al menos 1 participante.",
+      toast.warning(t("create_post.err_quota"), {
+        description: t("create_post.err_quota_desc"),
       });
       return;
     }
 
     if (!title || !caption || !image) {
-      toast.warning("Faltan datos", {
-        description: "Completa todos los campos obligatorios.",
+      toast.warning(t("create_post.err_missing"), {
+        description: t("create_post.err_missing_desc"),
       });
       return;
     }
@@ -163,7 +174,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
     try {
       setIsAnalyzing(true);
       setErrors({});
-      toast.loading("Verificando seguridad y publicando...", { id: TOAST_ID });
+      toast.loading(t("create_post.analyzing"), { id: TOAST_ID });
 
       const formData = new FormData();
       formData.append("title", title.trim());
@@ -180,7 +191,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      toast.success("¡Publicado con éxito!", { id: TOAST_ID });
+      toast.success(t("create_post.success_title"), { id: TOAST_ID });
       setIsSuccess(true);
       setTimeout(() => {
         onSuccess();
@@ -188,30 +199,26 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       }, 2200);
     } catch (error) {
       const err = error as ApiError;
-      const rawMessage = err.response?.data?.message || "Error de conexión";
+      const rawMessage = err.response?.data?.message || "Error";
 
-      const newErrors: { title?: boolean; caption?: boolean; image?: boolean } = {};
+      const newErrors: { title?: boolean; caption?: boolean; image?: boolean } =
+        {};
       const lowerMsg = rawMessage.toLowerCase();
 
-      if (lowerMsg.includes("título")) newErrors.title = true;
-      if (lowerMsg.includes("descripción") || lowerMsg.includes("texto")) newErrors.caption = true;
-      if (lowerMsg.includes("imagen") || lowerMsg.includes("foto")) newErrors.image = true;
-
-      if (lowerMsg.includes("todo") || lowerMsg.includes("contenido inapropiado")) {
+      if (lowerMsg.includes("título") || lowerMsg.includes("title"))
         newErrors.title = true;
+      if (lowerMsg.includes("descripción") || lowerMsg.includes("description"))
         newErrors.caption = true;
+      if (lowerMsg.includes("imagen") || lowerMsg.includes("image"))
         newErrors.image = true;
-      }
 
       setErrors(newErrors);
 
-      const cleanDescription = rawMessage.includes("|")
-        ? rawMessage.split("|")[1].replace("DETAIL:", "").trim()
-        : rawMessage;
-
-      toast.error("Rechazado por Seguridad", {
+      toast.error(t("create_post.err_security"), {
         id: TOAST_ID,
-        description: cleanDescription,
+        description: rawMessage.includes("|")
+          ? rawMessage.split("|")[1].trim()
+          : rawMessage,
       });
     } finally {
       setIsAnalyzing(false);
@@ -225,37 +232,40 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
           <div className="check-wrapper">
             <CheckCircle2 size={80} className="check-icon-anim" />
           </div>
-          <h2 className="success-title">¡PUBLICADO!</h2>
-          <p className="success-text">Tu descubrimiento ya es parte del mapa.</p>
+          <h2 className="success-title">{t("create_post.success_title")}</h2>
+          <p className="success-text">{t("create_post.success_desc")}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="modal-overlay blur">
+    <div className={`modal-overlay blur ${!isDarkMode ? "light-mode" : ""}`}>
       <div className={`create-post-content ${isLocked ? "is-locked" : ""}`}>
-        
         {isLocked && (
           <div className="modal-security-overlay">
             <div className="lock-content">
-              <ShieldAlert size={48} color="#ffffff" className="lock-icon-neon" />
-              <h2>ACCIÓN RESTRINGIDA</h2>
-              <p>Debes verificar tu identidad para poder realizar publicaciones en LYNKN.</p>
-              <button 
-                className="reverify-btn" 
+              <ShieldAlert
+                size={48}
+                color="var(--text-main)"
+                className="lock-icon-neon"
+              />
+              <h2>{t("create_post.restricted")}</h2>
+              <p>{t("create_post.restricted_desc")}</p>
+              <button
+                className="reverify-btn"
                 onClick={() => (window.location.href = "/profile")}
               >
-                IR A MI PERFIL
+                {t("create_post.go_profile")}
               </button>
             </div>
           </div>
         )}
 
         <div className="modal-header">
-          <h3>NUEVA PUBLICACIÓN</h3>
+          <h3>{t("create_post.title")}</h3>
           <button type="button" className="close-btn" onClick={onClose}>
-            <X size={20} />
+            <X size={20} color="var(--text-main)" />
           </button>
         </div>
 
@@ -270,14 +280,14 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                 {isAnalyzing && (
                   <div className="analyzing-overlay">
                     <Loader2 className="spin" size={24} />
-                    <span>MODERANDO...</span>
+                    <span>{t("create_post.moderating")}</span>
                   </div>
                 )}
               </div>
             ) : (
               <div className="upload-placeholder">
-                <Camera size={40} />
-                <p>AÑADIR FOTO</p>
+                <Camera size={40} color="var(--text-muted)" />
+                <p>{t("create_post.add_photo")}</p>
               </div>
             )}
             <input
@@ -291,12 +301,16 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
           </div>
 
           <div className="location-picker-container">
-            <label>UBICACIÓN DEL EVENTO</label>
+            <label>{t("create_post.loc_label")}</label>
             <div className="location-search-field">
-              <Search size={16} className="search-icon" />
+              <Search
+                size={16}
+                className="search-icon"
+                color="var(--text-muted)"
+              />
               <input
                 type="text"
-                placeholder="Busca un lugar..."
+                placeholder={t("create_post.search_place")}
                 value={searchQuery}
                 disabled={isLocked}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -316,15 +330,21 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                 <div ref={miniMapContainer} className="mini-map-instance" />
               </div>
             )}
-            <div className={`location-status-badge ${location.lat !== 40.4167 ? "ready" : "searching"}`}>
+            <div
+              className={`location-status-badge ${location.lat !== 40.4167 ? "ready" : "searching"}`}
+            >
               <Navigation size={12} />
-              <span>{isLocating ? "Localizando..." : "Ubicación fijada"}</span>
+              <span>
+                {isLocating
+                  ? t("create_post.loc_searching")
+                  : t("create_post.loc_fixed")}
+              </span>
             </div>
           </div>
 
           <div className="form-group">
             <div className="flex-label-header">
-              <label>PARTICIPANTES</label>
+              <label>{t("create_post.participants")}</label>
               <label className="checkbox-container">
                 <input
                   type="checkbox"
@@ -335,16 +355,28 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                     if (e.target.checked) setMaxParticipants("");
                   }}
                 />
-                <span className="checkbox-label">ILIMITADO</span>
+                <span className="checkbox-label">
+                  {t("create_post.unlimited")}
+                </span>
               </label>
             </div>
 
-            <div className={`input-with-icon ${isUnlimited || isLocked ? "disabled-field" : ""}`}>
-              <Users size={16} className="field-icon" />
+            <div
+              className={`input-with-icon ${isUnlimited || isLocked ? "disabled-field" : ""}`}
+            >
+              <Users
+                size={16}
+                className="field-icon"
+                color="var(--text-muted)"
+              />
               <input
                 type="number"
                 min="1"
-                placeholder={isUnlimited ? "Sin límite" : "Ej: 20"}
+                placeholder={
+                  isUnlimited
+                    ? t("create_post.unlimited")
+                    : t("create_post.limit_placeholder")
+                }
                 value={maxParticipants}
                 disabled={isUnlimited || isLocked}
                 onChange={(e) => {
@@ -357,31 +389,33 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
           </div>
 
           <div className="form-group">
-            <label>TÍTULO</label>
+            <label>{t("create_post.post_title")}</label>
             <input
               className={errors.title ? "input-error" : ""}
               value={title}
               disabled={isLocked}
               onChange={(e) => {
                 setTitle(e.target.value);
-                if (errors.title) setErrors((prev) => ({ ...prev, title: false }));
+                if (errors.title)
+                  setErrors((prev) => ({ ...prev, title: false }));
               }}
-              placeholder="Ej: Graffiti en Malasaña"
+              placeholder={t("create_post.title_placeholder")}
               required
             />
           </div>
 
           <div className="form-group">
-            <label>DESCRIPCIÓN</label>
+            <label>{t("create_post.description")}</label>
             <textarea
               className={errors.caption ? "input-error" : ""}
               value={caption}
               disabled={isLocked}
               onChange={(e) => {
                 setCaption(e.target.value);
-                if (errors.caption) setErrors((prev) => ({ ...prev, caption: false }));
+                if (errors.caption)
+                  setErrors((prev) => ({ ...prev, caption: false }));
               }}
-              placeholder="¿Qué lo hace especial?"
+              placeholder={t("create_post.desc_placeholder")}
               rows={3}
               required
             />
@@ -390,9 +424,20 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
           <button
             type="submit"
             className="submit-post-btn"
-            disabled={isLocked || isAnalyzing || isLocating || !title || !caption}
+            disabled={
+              isLocked ||
+              isAnalyzing ||
+              isLocating ||
+              !title ||
+              !caption ||
+              !image
+            }
           >
-            {isLocked ? "BLOQUEADO" : (isAnalyzing ? "VERIFICANDO..." : "PUBLICAR")}
+            {isLocked
+              ? t("common.locked")
+              : isAnalyzing
+                ? t("create_post.analyzing")
+                : t("create_post.submit")}
           </button>
         </form>
       </div>

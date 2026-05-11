@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { MapPin, Camera, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import "./ProfileHeader.css";
 
@@ -15,26 +16,28 @@ interface ProfileHeaderProps {
     };
   };
   onEditClick: () => void;
-  onReverifyClick: () => void; // Prop para abrir el modal de la cámara
+  onReverifyClick: () => void;
 }
 
 const ProfileHeader = ({ user, onEditClick, onReverifyClick }: ProfileHeaderProps) => {
-  
+  const { t } = useTranslation();
+  const isDarkMode = localStorage.getItem("theme") !== "light";
+
   const renderVerificationBadge = () => {
     switch (user.status_verif) {
       case 'approved':
-        return <div className="verif-badge approved"><CheckCircle2 size={14} /> VERIFICADO</div>;
+        return <div className="verif-badge approved"><CheckCircle2 size={14} /> {t('profile.verified')}</div>;
       case 'pending':
-        return <div className="verif-badge pending"><Clock size={14} /> EN REVISIÓN</div>;
+        return <div className="verif-badge pending"><Clock size={14} /> {t('profile.in_review')}</div>;
       case 'rejected':
-        return <div className="verif-badge rejected"><AlertCircle size={14} /> RECHAZADO</div>;
+        return <div className="verif-badge rejected"><AlertCircle size={14} /> {t('profile.rejected')}</div>;
       default:
         return null;
     }
   };
 
   return (
-    <header className="profile-header">
+    <header className={`profile-header-component ${!isDarkMode ? 'light-mode' : ''}`}>
       <div className="avatar-section">
         <div className="avatar-wrapper">
           <img 
@@ -49,17 +52,26 @@ const ProfileHeader = ({ user, onEditClick, onReverifyClick }: ProfileHeaderProp
       
       <section className="info-section">
         <div className="username-row">
-          <h1>{user.username}</h1>
+          <h1 className="profile-username">{user.username}</h1>
           <div className="action-buttons">
             <button className="edit-profile-action-btn" onClick={onEditClick}>
-              Editar perfil
+              {t('profile.edit_btn')}
             </button>
 
-            {/* BOTON DE VERIFICACION PARA NO APROBADOS*/}
-            {user.status_verif !== 'approved' && (
+            {/* CAMBIO APLICADO: 
+              El botón de selfie SOLO se muestra si:
+              1. No está verificado ('unverified' o no tiene estado)
+              2. O si su verificación previa fue rechazada ('rejected')
+              Si está en 'pending', el botón se oculta.
+            */}
+            {(user.status_verif === 'unverified' || user.status_verif === 'rejected' || !user.status_verif) && (
               <button className="reverify-action-btn" onClick={onReverifyClick}>
                 <Camera size={16} />
-                {user.status_verif === 'rejected' ? 'Reintentar selfie' : 'Subir selfie'}
+                <span>
+                  {user.status_verif === 'rejected' 
+                    ? t('profile.reverify_btn') 
+                    : t('profile.upload_selfie')}
+                </span>
               </button>
             )}
           </div>
@@ -70,17 +82,17 @@ const ProfileHeader = ({ user, onEditClick, onReverifyClick }: ProfileHeaderProp
         </div>
         
         <div className="stats-row">
-          <span><strong>{user.stats?.posts ?? 0}</strong> posts</span>
-          <span><strong>{user.stats?.followers ?? 0}</strong> seguidores</span>
-          <span><strong>{user.stats?.following ?? 0}</strong> seguidos</span>
+          <div className="stat-item"><strong>{user.stats?.posts ?? 0}</strong> {t('profile.posts')}</div>
+          <div className="stat-item"><strong>{user.stats?.followers ?? 0}</strong> {t('profile.followers')}</div>
+          <div className="stat-item"><strong>{user.stats?.following ?? 0}</strong> {t('profile.following')}</div>
         </div>
         
         <div className="bio-row">
-          <span className="name">{user.username}</span>
-          <p className="bio-text">{user.bio || "Sin biografía aún..."}</p>
-          <div className="location">
-            <MapPin size={14} /> 
-            <span>{user.location || "Ubicación no especificada"}</span>
+          <span className="display-name">{user.username}</span>
+          <p className="bio-text">{user.bio || t('profile.no_bio')}</p>
+          <div className="location-tag">
+            <MapPin size={14} color="var(--text-muted)" /> 
+            <span>{user.location || t('profile.no_location')}</span>
           </div>
         </div>
       </section>

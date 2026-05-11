@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Clock,
   CheckCircle,
@@ -7,7 +8,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import "./NotificationItem.css";
 
 interface NotificationData {
@@ -29,57 +30,38 @@ interface NotifProps {
 }
 
 const NotificationItem: React.FC<NotifProps> = ({ notification }) => {
-  // Función para determinar el icono según el tipo de notificación
+  const { t, i18n } = useTranslation();
+  const isDarkMode = localStorage.getItem("theme") !== "light";
+
+  const dateLocale = i18n.language.startsWith('es') ? es : enUS;
+
   const getIcon = () => {
     switch (notification.type) {
-      case "join_request":
-        return <UserPlus size={12} />;
-      case "accepted":
-        return <CheckCircle size={12} />;
+      case "join_request": return <UserPlus size={12} />;
+      case "accepted": return <CheckCircle size={12} />;
       case "rejected":
-        return <XCircle size={12} />;
-      case "post_deleted":
-        return <AlertTriangle size={12} />;
-      case "kicked":
-        return <XCircle size={12} color="#ef4444" />;
-      default:
-        return <Clock size={12} />;
+      case "kicked": return <XCircle size={12} />;
+      case "post_deleted": return <AlertTriangle size={12} />;
+      default: return <Clock size={12} />;
     }
   };
 
-  // Función para generar el mensaje de la notificación
   const getMessage = () => {
-    const username = notification.sender?.username || "Un usuario";
-    const postTitle = notification.posts?.title || "una actividad";
+    const username = notification.sender?.username || t('notifications.types.default_user');
+    const postTitle = notification.posts?.title || t('notifications.types.default_activity');
 
-    switch (notification.type) {
-      case "join_request":
-        return `**@${username}** quiere unirse a tu actividad **${postTitle}**.`;
-      case "accepted":
-        return `**@${username}** ha **aceptado** tu solicitud para **${postTitle}**. ¡Ya puedes ver la ubicación!`;
-      case "rejected":
-        return `**@${username}** ha **rechazado** tu solicitud para unirte a **${postTitle}**.`;
-      case "kicked":
-        return `Has sido **expulsado** de la actividad **${postTitle}**. Ya no tienes acceso al chat ni a la ubicación.`;
-      case "info_pending":
-        return `Has solicitado unirte a **${postTitle}**. Esperando respuesta del organizador...`;
-      case "post_deleted":
-        return `**@${username}** ha **cancelado** el evento **${postTitle}**. El grupo ha sido disuelto.`;
-      default:
-        return `Nueva actualización en **${postTitle}**.`;
-    }
+    return t(`notifications.types.${notification.type}`, {
+      user: `**@${username}**`,
+      post: `**${postTitle}**`,
+      defaultValue: t('notifications.types.default_update', { post: postTitle })
+    });
   };
 
   return (
-    <div
-      className={`notif-card ${notification.is_read ? "read" : "unread"} ${notification.type === "post_deleted" ? "alert" : ""}`}
-    >
+    <div className={`notif-card ${notification.is_read ? "read" : "unread"} ${notification.type} ${!isDarkMode ? 'light-mode' : ''}`}>
       <div className="notif-avatar-container">
         <img
-          src={
-            notification.sender?.foto_perfil ||
-            "https://via.placeholder.com/150"
-          }
+          src={notification.sender?.foto_perfil || `https://api.dicebear.com/7.x/avataaars/svg?seed=${notification.sender?.username || 'Lynkn'}`}
           alt={notification.sender?.username}
           className="notif-avatar-img"
         />
@@ -90,6 +72,7 @@ const NotificationItem: React.FC<NotifProps> = ({ notification }) => {
 
       <div className="notif-content">
         <p
+          className="notif-text"
           dangerouslySetInnerHTML={{
             __html: getMessage().replace(/\*\*(.*?)\*\*/g, "<b>$1</b>"),
           }}
@@ -98,7 +81,7 @@ const NotificationItem: React.FC<NotifProps> = ({ notification }) => {
         <span className="notif-time">
           {formatDistanceToNow(new Date(notification.created_at), {
             addSuffix: true,
-            locale: es,
+            locale: dateLocale,
           })}
         </span>
       </div>

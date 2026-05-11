@@ -13,15 +13,19 @@ const ProfileMap = ({ posts, onMarkerClick }: ProfileMapProps) => {
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
 
+  const isDarkMode = localStorage.getItem("theme") !== "light";
+
   // 1. Inicialización del Mapa
   useEffect(() => {
     if (!mapContainer.current) return;
     
     const API_KEY = import.meta.env.VITE_STADIA_API_KEY;
     
+    const styleName = isDarkMode ? "alidade_smooth_dark" : "alidade_smooth";
+    
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: `https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json?api_key=${API_KEY}`,
+      style: `https://tiles.stadiamaps.com/styles/${styleName}.json?api_key=${API_KEY}`,
       center: [-3.7037, 40.4167],
       zoom: 11,
       attributionControl: false
@@ -38,7 +42,7 @@ const ProfileMap = ({ posts, onMarkerClick }: ProfileMapProps) => {
         map.current = null;
       }
     };
-  }, []);
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (!map.current) return;
@@ -61,29 +65,30 @@ const ProfileMap = ({ posts, onMarkerClick }: ProfileMapProps) => {
       const imgDiv = document.createElement('div');
       imgDiv.className = 'marker-image';
       imgDiv.style.backgroundImage = `url(${post.image_url || ''})`;
+      
       el.appendChild(imgDiv);
       
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         onMarkerClick(post);
         map.current?.flyTo({ 
-          center: [post.lng, post.lat], 
+          center: [Number(post.lng), Number(post.lat)], 
           zoom: 15,
           essential: true 
         });
       });
 
       const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([post.lng, post.lat])
+        .setLngLat([Number(post.lng), Number(post.lat)])
         .addTo(map.current!);
       
       markersRef.current.push(marker);
-      bounds.extend([post.lng, post.lat]);
+      bounds.extend([Number(post.lng), Number(post.lat)]);
     });
 
     if (hasValidCoords) {
       if (posts.length === 1) {
-        map.current.setCenter([posts[0].lng, posts[0].lat]);
+        map.current.setCenter([Number(posts[0].lng), Number(posts[0].lat)]);
         map.current.setZoom(14);
       } else {
         map.current.fitBounds(bounds, { 
@@ -104,7 +109,8 @@ const ProfileMap = ({ posts, onMarkerClick }: ProfileMapProps) => {
         height: '100%', 
         minHeight: '400px', 
         borderRadius: '20px',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        background: 'var(--bg-input)'
       }} 
     />
   );

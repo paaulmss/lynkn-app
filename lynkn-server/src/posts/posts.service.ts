@@ -192,7 +192,7 @@ export class PostsService {
         {
           post_id: postId,
           sender_id: userId,
-          content: `${participation.users.username} se ha unido al grupo`,
+          content: `SYS_USER_JOINED:${participation.users.username}`,
           type: "system",
         },
       ]);
@@ -242,7 +242,7 @@ export class PostsService {
         .insert([{
           post_id: part.post_id,
           sender_id: part.user_id,
-          content: `${username} ha salido del grupo`,
+          content: `SYS_USER_LEFT:${username}`,
           type: 'system'
         }]);
 
@@ -294,7 +294,6 @@ export class PostsService {
 
   async updateParticipationStatus(participationId: number, status: "accepted" | "rejected") {
     try {
-      // Obtener el estado actual y datos del usuario
       const { data: currentPart, error: currentError } = await this.supabase
         .from("participations")
         .select("status, post_id, user_id, users(username), posts(user_id)")
@@ -304,21 +303,9 @@ export class PostsService {
       if (currentError || !currentPart) throw new InternalServerErrorException("No se encontró la participación");
 
       const ownerId = (currentPart.posts as any)?.user_id;
+
       if (status === "rejected" && currentPart.user_id === ownerId) {
         throw new BadRequestException("El organizador no puede ser expulsado de su propio evento");
-      }
-
-      if (status === "accepted") {
-        const { data: postInfo } = await this.supabase
-          .from("posts")
-          .select("max_particip, current_particip")
-          .eq("id", currentPart.post_id)
-          .single();
-
-        const isUnlimited = postInfo.max_particip === 0;
-        if (!isUnlimited && postInfo.current_particip >= postInfo.max_particip) {
-          throw new BadRequestException("El evento ya ha alcanzado el límite de participantes");
-        }
       }
 
       const { data: updatedPart, error: updateError } = await this.supabase
@@ -330,8 +317,8 @@ export class PostsService {
 
       if (updateError) throw new InternalServerErrorException(updateError.message);
 
-      const userArray = currentPart.users as unknown as { username: string }[];
-      const participantUsername = Array.isArray(userArray) ? userArray[0]?.username : (userArray as any)?.username;
+      const userData = currentPart.users as any;
+      const participantUsername = Array.isArray(userData) ? userData[0]?.username : userData?.username;
 
       if (updatedPart) {
         // CASO A: ACEPTAR A ALGUIEN NUEVO
@@ -341,25 +328,22 @@ export class PostsService {
           await this.supabase.from("messages").insert([{
             post_id: updatedPart.post_id,
             sender_id: updatedPart.posts.user_id,
-            content: `${participantUsername} se ha unido al grupo`,
+            content: `SYS_USER_JOINED:${participantUsername}`,
             type: "system"
           }]);
         }
 
         // CASO B: EXPULSAR / RECHAZAR A ALGUIEN QUE YA ESTABA DENTRO
         if (currentPart.status === "accepted" && status === "rejected") {
-          // RECALCULO: Liberar plaza en la DB para que otro pueda entrar
           await this.supabase.rpc("decrement_participant", { row_id: updatedPart.post_id });
 
-          // Chat: Mensaje de sistema informativo para los que siguen dentro
           await this.supabase.from("messages").insert([{
             post_id: updatedPart.post_id,
             sender_id: updatedPart.posts.user_id,
-            content: `${participantUsername} ha sido eliminado del evento por el organizador`,
+            content: `SYS_USER_KICKED:${participantUsername}`,
             type: "system"
           }]);
 
-          // NOTIFICACIÓN: Aviso de expulsión al usuario
           await this.createNotification(
             updatedPart.user_id,
             updatedPart.posts.user_id,
@@ -368,7 +352,6 @@ export class PostsService {
           );
         }
 
-        // Limpiar notificaciones de solicitud antiguas
         await this.supabase
           .from("notifications")
           .delete()
@@ -380,7 +363,6 @@ export class PostsService {
 
       return updatedPart;
     } catch (error) {
-      console.error("Error en updateParticipationStatus:", error);
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException("No se pudo procesar el cambio de estado");
     }
@@ -395,9 +377,7 @@ export class PostsService {
 
     if (fetchError) throw new InternalServerErrorException("Error al obtener participantes");
 
-    // 2. Si hay gente, les enviamos la notificación de "Evento Cancelado"
     if (participants && participants.length > 0) {
-      //Obtenemos el título antes de que muera el post
       const { data: postData } = await this.supabase
         .from('posts')
         .select('title')
@@ -416,12 +396,11 @@ export class PostsService {
       await this.supabase.from('notifications').insert(notifications);
     }
 
-    // 3. Borramos el post físicamente
     const { error: deleteError } = await this.supabase
       .from('posts')
       .delete()
       .eq('id', postId)
-      .eq('user_id', userId); // Seguridad: solo el dueño puede borrarlo
+      .eq('user_id', userId);
 
     if (deleteError) throw new InternalServerErrorException(deleteError.message);
 
@@ -429,7 +408,6 @@ export class PostsService {
   }
 
   async kickParticipant(participationId: number, ownerId: number) {
-    // 1. Obtener datos del participante antes de nada
     const { data: part, error: fetchError } = await this.supabase
       .from('participations')
       .select('*, users(username), posts(title)')
@@ -438,7 +416,6 @@ export class PostsService {
 
     if (fetchError || !part) throw new Error("No se encontró la participación");
 
-    // 2. Cambiar estado a 'rejected'
     const { error: updateError } = await this.supabase
       .from('participations')
       .update({ status: 'rejected' })
@@ -446,25 +423,22 @@ export class PostsService {
 
     if (updateError) throw new Error("Error al expulsar");
 
-    // 3. Si estaba aceptado, liberamos el hueco en el post
     if (part.status === 'accepted') {
       await this.supabase.rpc('decrement_participant', { row_id: part.post_id });
 
-      // 4. Mensaje de sistema en el CHAT para todos
       await this.supabase.from('messages').insert([{
         post_id: part.post_id,
         sender_id: ownerId,
-        content: `${part.users.username} ha sido expulsado del evento por el organizador.`,
+        content: `SYS_USER_KICKED:${part.users.username}`,
         type: 'system'
       }]);
     }
 
-    // 5. Notificación privada al usuario expulsado
     await this.createNotification(
       part.user_id,
       ownerId,
       part.post_id,
-      'kicked' // Crearemos este tipo en el frontend
+      'kicked'
     );
 
     return { success: true };

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import QRCode from "react-qr-code";
 import { io, Socket } from "socket.io-client";
@@ -27,6 +28,7 @@ interface ApiError {
 }
 
 const Register = () => {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [isValidatingFace, setIsValidatingFace] = useState(false);
   const [faceMatchStatus, setFaceMatchStatus] = useState<
@@ -34,6 +36,8 @@ const Register = () => {
   >("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState(false);
+
+  const isDarkMode = localStorage.getItem("theme") !== "light";
 
   const [formData, setFormData] = useState({
     username: "",
@@ -47,7 +51,15 @@ const Register = () => {
     selfie: null,
   });
 
-  // --- LOGICA DE FORTALEZA DE CONTRASEÑA ---
+  // --- UTILIDADES ---
+  const validateEmail = (email: string) => {
+    return String(email)
+      .toLowerCase()
+      .match(
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+      );
+  };
+
   const calculatePasswordStrength = (password: string) => {
     let score = 0;
     if (!password) return 0;
@@ -58,6 +70,12 @@ const Register = () => {
     return score;
   };
 
+  const getStrengthLabel = (score: number) => {
+    if (score < 50) return t("register.pwd_strength.weak");
+    if (score < 100) return t("register.pwd_strength.medium");
+    return t("register.pwd_strength.strong");
+  };
+
   const getStrengthColor = (score: number) => {
     if (score < 50) return "#ef4444";
     if (score < 75) return "#f59e0b";
@@ -65,8 +83,6 @@ const Register = () => {
   };
 
   const pwdScore = calculatePasswordStrength(formData.password);
-
-  // --- CONFIGURACIÓN DE VERIFICACIÓN REMOTA ---
   const [sessionId] = useState(() => `lynkn_verify_${Date.now()}`);
   const [showCamera, setShowCamera] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -81,9 +97,9 @@ const Register = () => {
       .then(() => console.log("IA Preparada"))
       .catch((err: Error) => {
         console.error("Error modelos:", err);
-        setErrorMsg("Error al cargar motores de IA.");
+        setErrorMsg(t("register.errors.ai_error"));
       });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!showQR) return;
@@ -122,15 +138,15 @@ const Register = () => {
             setFaceMatchStatus("success");
           } else {
             setFaceMatchStatus("error");
-            setErrorMsg("La identidad no coincide. Repite el selfie.");
+            setErrorMsg(t("register.errors.ai_no_match"));
           }
         } catch (err) {
           const error = err as Error;
           setFaceMatchStatus("error");
           setErrorMsg(
             error.message.includes("rostro claro")
-              ? "No se detecta un rostro."
-              : "Error en el escaneo.",
+              ? t("register.errors.ai_no_face")
+              : t("register.errors.ai_error"),
           );
         } finally {
           setIsValidatingFace(false);
@@ -138,7 +154,7 @@ const Register = () => {
       }
     };
     validateAutomatically();
-  }, [previews.foto_perfil, previews.selfie]);
+  }, [previews.foto_perfil, previews.selfie, t]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -160,26 +176,20 @@ const Register = () => {
     }
   };
 
-  // --- VALIDACION DE EDAD Y DISPONIBILIDAD (PASO 1) ---
   const handleNextStep = async () => {
     setErrorMsg(null);
+    if (!validateEmail(formData.email))
+      return setErrorMsg(t("register.errors.invalid_email"));
+    if (!formData.birth_day)
+      return setErrorMsg(t("register.errors.birth_required"));
 
-    // 1. Validar Edad
-    if (!formData.birth_day) {
-      return setErrorMsg("La fecha de nacimiento es obligatoria.");
-    }
     const birthDate = new Date(formData.birth_day);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    if (age < 18) {
-      return setErrorMsg("Debes tener al menos 18 años para unirte.");
-    }
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+    if (age < 18) return setErrorMsg(t("register.errors.underage"));
 
-    // 2. Validar Disponibilidad en Backend
     setLoadingStep(true);
     try {
       await api.post("/auth/check-availability", {
@@ -187,9 +197,14 @@ const Register = () => {
         username: formData.username,
       });
       setStep(2);
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as ApiError;
-      setErrorMsg(err.response?.data?.message || "Error de validación.");
+      const serverCode = err.response?.data?.message;
+      setErrorMsg(
+        t(`auth.errors.${serverCode}`, {
+          defaultValue: t("auth.login.error_default"),
+        }),
+      );
     } finally {
       setLoadingStep(false);
     }
@@ -205,7 +220,7 @@ const Register = () => {
       });
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch {
-      setErrorMsg("Cámara no disponible.");
+      setErrorMsg(t("reverify.cam_error"));
       setShowCamera(false);
     }
   };
@@ -243,31 +258,52 @@ const Register = () => {
     setErrorMsg(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // MODIFICACIÓN: Agregamos parámetro skip para diferenciar caminos
+  const handleSubmit = async (
+    e?: React.FormEvent,
+    skipVerification: boolean = false,
+  ) => {
+    if (e) e.preventDefault();
     setErrorMsg(null);
 
-    if (!previews.foto_perfil) {
-      return setErrorMsg("La foto de perfil es obligatoria.");
+    if (!previews.foto_perfil)
+      return setErrorMsg(t("register.errors.avatar_required"));
+
+    // Si NO se salta la verificación y no hay éxito, bloqueamos
+    if (!skipVerification && faceMatchStatus !== "success") {
+      return setErrorMsg(t("register.errors.ai_no_match"));
     }
 
     try {
-      await api.post("/auth/register", { ...formData, ...previews });
-      alert("¡Cuenta creada!");
+      // Si salta la verificación, mandamos selfie como null
+      const finalPayload = {
+        ...formData,
+        foto_perfil: previews.foto_perfil,
+        selfie: skipVerification ? null : previews.selfie,
+      };
+
+      await api.post("/auth/register", finalPayload);
+      alert(t("profile.verified") + "!");
       window.location.href = "/login";
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as ApiError;
-      setErrorMsg(err.response?.data?.message || "Error al enviar registro.");
+      const serverCode = err.response?.data?.message;
+      setErrorMsg(
+        t(`auth.errors.${serverCode}`, {
+          defaultValue: t("edit_profile.err_save"),
+        }),
+      );
     }
   };
 
-  // Calculo de fecha maxima para el input date (hace 18 años)
-  const maxDate = new Date();
-  maxDate.setFullYear(maxDate.getFullYear() - 18);
-  const maxDateString = maxDate.toISOString().split("T")[0];
+  const maxDateString = new Date(
+    new Date().setFullYear(new Date().getFullYear() - 18),
+  )
+    .toISOString()
+    .split("T")[0];
 
   return (
-    <div className="nomad-reg-container">
+    <div className={`nomad-reg-container ${!isDarkMode ? "light-mode" : ""}`}>
       <div className="nomad-reg-bg"></div>
       <div className="nomad-reg-card">
         <header className="nomad-reg-header">
@@ -278,15 +314,18 @@ const Register = () => {
           </div>
         </header>
 
-        <form onSubmit={handleSubmit} className="nomad-reg-form">
+        <form
+          onSubmit={(e) => handleSubmit(e, false)}
+          className="nomad-reg-form"
+        >
           {step === 1 && (
             <div className="nomad-step animate-in">
-              <h2 className="step-title">DATOS BÁSICOS</h2>
+              <h2 className="step-title">{t("register.step_basic")}</h2>
               <div className="nomad-input-group">
                 <input
                   type="text"
                   name="username"
-                  placeholder="USUARIO"
+                  placeholder={t("register.placeholders.username")}
                   value={formData.username}
                   onChange={handleInputChange}
                   required
@@ -296,7 +335,7 @@ const Register = () => {
                 <input
                   type="email"
                   name="email"
-                  placeholder="EMAIL"
+                  placeholder={t("register.placeholders.email")}
                   value={formData.email}
                   onChange={handleInputChange}
                   required
@@ -306,7 +345,7 @@ const Register = () => {
                 <input
                   type="password"
                   name="password"
-                  placeholder="CONTRASEÑA"
+                  placeholder={t("register.placeholders.password")}
                   value={formData.password}
                   onChange={handleInputChange}
                   required
@@ -326,17 +365,15 @@ const Register = () => {
                       className="strength-label"
                       style={{ color: getStrengthColor(pwdScore) }}
                     >
-                      {pwdScore < 50
-                        ? "DÉBIL"
-                        : pwdScore < 100
-                          ? "MEDIA"
-                          : "FUERTE"}
+                      {getStrengthLabel(pwdScore)}
                     </span>
                   </div>
                 )}
               </div>
               <div className="nomad-input-group">
-                <label className="nomad-label">FECHA NACIMIENTO</label>
+                <label className="nomad-label">
+                  {t("register.placeholders.birth")}
+                </label>
                 <input
                   type="date"
                   name="birth_day"
@@ -366,7 +403,7 @@ const Register = () => {
                   <Loader2 className="animate-spin" size={18} />
                 ) : (
                   <>
-                    CONTINUAR <ChevronRight size={18} />
+                    {t("common.continue")} <ChevronRight size={18} />
                   </>
                 )}
               </button>
@@ -375,7 +412,7 @@ const Register = () => {
 
           {step === 2 && (
             <div className="nomad-step animate-in">
-              <h2 className="step-title">IDENTIDAD</h2>
+              <h2 className="step-title">{t("register.step_identity")}</h2>
               <div className="avatar-picker">
                 <input
                   type="file"
@@ -395,7 +432,9 @@ const Register = () => {
 
               <div className="nomad-verification-box">
                 <div className="nomad-verify-header">
-                  <label className="nomad-label">BIO-MÉTRICA</label>
+                  <label className="nomad-label">
+                    {t("register.identity.biometric")}
+                  </label>
                   {faceMatchStatus === "success" && (
                     <ShieldCheck size={18} color="#22c55e" />
                   )}
@@ -415,7 +454,7 @@ const Register = () => {
                       className="nomad-btn-retry"
                       onClick={handleRetry}
                     >
-                      <RefreshCw size={14} /> REPETIR
+                      <RefreshCw size={14} /> {t("reverify.retry")}
                     </button>
                   </div>
                 ) : (
@@ -427,18 +466,19 @@ const Register = () => {
                           className="method-btn"
                           onClick={startCamera}
                         >
-                          <Camera size={18} /> CÁMARA
+                          <Camera size={18} />{" "}
+                          {t("reverify.use_pc").split(" ").slice(-1)}
                         </button>
                         <button
                           type="button"
                           className="method-btn"
                           onClick={() => setShowQR(true)}
                         >
-                          <Smartphone size={18} /> MÓVIL
+                          <Smartphone size={18} />{" "}
+                          {t("reverify.use_mobile").split(" ").slice(-1)}
                         </button>
                       </div>
                     )}
-
                     {showCamera && (
                       <div className="camera-view-container">
                         <video ref={videoRef} autoPlay playsInline muted />
@@ -452,26 +492,25 @@ const Register = () => {
                             className="btn-capture"
                             onClick={takePhoto}
                           >
-                            CAPTURAR
+                            {t("reverify.capture")}
                           </button>
                           <button
                             type="button"
                             className="btn-text-cancel"
                             onClick={stopCamera}
                           >
-                            CANCELAR
+                            {t("common.cancel")}
                           </button>
                         </div>
                       </div>
                     )}
-
                     {showQR && (
                       <div className="qr-view-container">
                         {isReceiving ? (
                           <div className="nomad-loader-box">
                             <div className="nomad-spinner"></div>
-                            <span style={{ color: "#fff", fontSize: "0.7rem" }}>
-                              RECIBIENDO...
+                            <span style={{ fontSize: "0.7rem" }}>
+                              {t("register.identity.receiving")}
                             </span>
                           </div>
                         ) : (
@@ -488,21 +527,16 @@ const Register = () => {
                           className="btn-text-cancel"
                           onClick={() => setShowQR(false)}
                         >
-                          VOLVER
+                          {t("common.back")}
                         </button>
                       </div>
                     )}
                   </div>
                 )}
-
-                {errorMsg && (
-                  <div className="nomad-ui-error animate-in">
-                    <AlertCircle size={14} /> <span>{errorMsg}</span>
-                  </div>
-                )}
                 {faceMatchStatus === "success" && !isValidatingFace && (
                   <div className="nomad-ui-success animate-in">
-                    <ShieldCheck size={14} /> <span>IDENTIDAD VERIFICADA</span>
+                    <ShieldCheck size={14} />{" "}
+                    <span>{t("register.identity.verified")}</span>
                   </div>
                 )}
               </div>
@@ -517,25 +551,21 @@ const Register = () => {
                     className="nomad-btn-secondary"
                     onClick={() => setStep(1)}
                   >
-                    <ChevronLeft size={18} /> ATRÁS
+                    <ChevronLeft size={18} /> {t("common.back")}
                   </button>
-
+                  {/* BLOQUEO: Solo se habilita si faceMatchStatus es success */}
                   <button
                     type="submit"
                     className="nomad-btn-primary"
-                    disabled={
-                      isValidatingFace ||
-                      (faceMatchStatus !== "success" &&
-                        faceMatchStatus !== "idle")
-                    }
+                    disabled={isValidatingFace || faceMatchStatus !== "success"}
                   >
                     {isValidatingFace ? (
                       <>
                         <Loader2 className="animate-spin" size={18} />{" "}
-                        ESCANEANDO...
+                        {t("register.identity.scanning")}
                       </>
                     ) : (
-                      "FINALIZAR"
+                      t("register.identity.finish")
                     )}
                   </button>
                 </div>
@@ -545,41 +575,27 @@ const Register = () => {
                     type="button"
                     className="btn-text-cancel"
                     style={{ fontSize: "0.7rem", opacity: 0.8 }}
-                    onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
-                      if (
-                        window.confirm(
-                          "Si no te verificas ahora, no podrás unirte a eventos hasta que lo hagas desde tu perfil.",
-                        )
-                      ) {
-                        handleSubmit(e as unknown as React.FormEvent);
-                      }
-                    }}
+                    onClick={() =>
+                      window.confirm(t("register.identity.later_confirm")) &&
+                      handleSubmit(undefined, true)
+                    }
                   >
-                    VERIFICAR IDENTIDAD MÁS TARDE
+                    {t("register.identity.later_btn")}
                   </button>
                 )}
               </div>
             </div>
           )}
         </form>
-
         <div
           className="login-footer"
           style={{ marginTop: "2rem", textAlign: "center" }}
         >
-          <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem" }}>
-            ¿Ya eres miembro?{" "}
+          <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+            {t("auth.login.no_account")}{" "}
           </span>
-          <Link
-            to="/login"
-            className="link-to-register"
-            style={{
-              fontWeight: "bold",
-              color: "#00f2ff",
-              textDecoration: "none",
-            }}
-          >
-            ENTRAR
+          <Link to="/login" className="link-to-register">
+            {t("auth.login.submit")}
           </Link>
         </div>
       </div>

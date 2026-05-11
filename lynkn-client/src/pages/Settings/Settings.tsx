@@ -1,32 +1,78 @@
 import { useState } from "react";
-import { 
-  Globe, 
-  Map as MapIcon, 
-  ShieldCheck, 
-  LogOut, 
-  ChevronRight, 
+import { useTranslation } from "react-i18next";
+import {
+  Globe,
+  Map as MapIcon,
+  ShieldCheck,
+  LogOut,
+  ChevronRight,
   Menu,
   AlertTriangle,
-  Clock
+  Clock,
+  Trash2,
+  Moon,
+  Sun,
 } from "lucide-react";
-import Sidebar from "../../components/Sidebar"; 
+import { toast } from "sonner";
+import Sidebar from "../../components/Sidebar";
 import CreatePostModal from "../../components/posts/CreatePostModal";
-import ReverifyModal from "../Profile/ReverifyModal"; 
+import ReverifyModal from "../Profile/ReverifyModal";
+import DeleteAccountModal from "../Profile/DeleteAccountModal";
+import LanguageModal from "./LanguageModal";
 import { useAuth } from "../../hooks/useAuth";
+import api from "../../api/axiosConfig";
 import "./Settings.css";
 
 const Settings = () => {
-  const { user, isSidebarOpen, setIsSidebarOpen, toggleSidebar, logout } = useAuth();
+  const {
+    user,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    toggleSidebar,
+    logout,
+    updatePreferences,
+  } = useAuth();
+
+  const { t, i18n } = useTranslation();
+
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [isReverifyOpen, setIsReverifyOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isLangModalOpen, setIsLangModalOpen] = useState(false);
+
+  const isDarkMode = user?.theme !== "light";
+
+  const toggleTheme = async () => {
+    const newTheme = isDarkMode ? "light" : "dark";
+    await updatePreferences(newTheme, i18n.language as "es" | "en");
+    toast.success(t("common.save"));
+  };
 
   const handleReverifySuccess = () => {
     setIsReverifyOpen(false);
-    console.log("Proceso de re-verificación enviado");
+    toast.success(t("settings.verify_sent"));
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleteModalOpen(false);
+
+    toast.promise(api.delete(`/users/${user?.id}`), {
+      loading: t("settings.deleting_loader"),
+      success: () => {
+        setTimeout(() => {
+          logout();
+        }, 2500);
+        return t("settings.delete_success");
+      },
+      error: (err) => {
+        console.error("Error al borrar:", err);
+        return t("settings.delete_error");
+      },
+    });
   };
 
   return (
-    <div className="explore-container">
+    <div className={`explore-container ${!isDarkMode ? "light-mode" : ""}`}>
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -41,145 +87,149 @@ const Settings = () => {
             onClick={toggleSidebar}
             type="button"
           >
-            <Menu color="white" size={24} />
+            <Menu color={isDarkMode ? "white" : "black"} size={24} />
           </button>
-          <div className="navbar-page-title">AJUSTES</div>
+          <div className="navbar-page-title">{t("nav.settings")}</div>
         </header>
 
-        <div className="settings-page-wrapper">
+        <div className="settings-page-wrapper animate-in">
           <header className="settings-header">
-            <h1>AJUSTES</h1>
-            <p>Gestiona tu experiencia en Lynkn</p>
+            <h1>{t("settings.title")}</h1>
+            <p>{t("settings.subtitle")}</p>
           </header>
 
           <div className="settings-grid">
-            
             {/* SECCION: IDENTIDAD Y SEGURIDAD */}
             <section className="settings-card verification-status-card">
               <div className="card-header">
-                <ShieldCheck size={20} />
-                <span>IDENTIDAD Y SEGURIDAD</span>
+                <ShieldCheck size={20} color="var(--neon-glow)" />
+                <span>{t("settings.sec_identity")}</span>
               </div>
-              
+
               <div className={`status-container ${user?.status_verif}`}>
                 <div className="status-main">
-                  {/* CASO: APROBADO */}
-                  {user?.status_verif === 'approved' && (
+                  {user?.status_verif === "approved" && (
                     <div className="status-content">
                       <ShieldCheck size={32} color="#00f2ff" />
                       <div className="status-text">
-                        <span className="status-title">CUENTA VERIFICADA</span>
-                        <small>Tu identidad ha sido confirmada con éxito.</small>
+                        <span className="status-title">
+                          {t("settings.status_verified")}
+                        </span>
+                        <small>{t("settings.status_verified_desc")}</small>
                       </div>
                     </div>
                   )}
 
-                  {/* CASO: PENDIENTE */}
-                  {user?.status_verif === 'pending' && (
+                  {user?.status_verif === "pending" && (
                     <div className="status-content">
                       <Clock size={32} color="#f59e0b" />
                       <div className="status-text">
-                        <span className="status-title">VERIFICACIÓN PENDIENTE</span>
-                        <small>Estamos revisando tu selfie. Esto tardará poco.</small>
+                        <span className="status-title">
+                          {t("settings.status_pending")}
+                        </span>
+                        <small>{t("settings.status_pending_desc")}</small>
                       </div>
                     </div>
                   )}
 
-                  {/* CASO: NO VERIFICADO */}
-                  {user?.status_verif === 'unverified' && (
+                  {user?.status_verif === "unverified" && (
                     <div className="status-content">
                       <AlertTriangle size={32} color="#ef4444" />
                       <div className="status-text">
-                        <span className="status-title">IDENTIDAD NO VERIFICADA</span>
-                        <small>Acceso limitado. No puedes unirte a eventos.</small>
+                        <span className="status-title">
+                          {t("settings.status_unverified")}
+                        </span>
+                        <small>{t("settings.status_unverified_desc")}</small>
                       </div>
-                    </div>
-                  )}
-
-                  {/* CASO: RECHAZADO */}
-                  {user?.status_verif === 'rejected' && (
-                    <div className="status-content rejected-layout">
-                      <div className="status-info-group">
-                        <AlertTriangle size={32} color="#ef4444" />
-                        <div className="status-text">
-                          <span className="status-title" style={{ color: "#ef4444" }}>VERIFICACIÓN RECHAZADA</span>
-                          <small>Tu solicitud no cumple los requisitos de seguridad.</small>
-                        </div>
-                      </div>
-                      
-                      {/* Nota del administrador si existe */}
-                      {user?.verif_message && (
-                        <div className="admin-note-settings">
-                          <span className="note-label">NOTA DEL ADMINISTRADOR:</span>
-                          <p>"{user.verif_message}"</p>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
-
-                {/* BOTON DE ACCION*/}
-                {(user?.status_verif === 'unverified' || user?.status_verif === 'rejected') && (
-                  <button 
-                    className="verify-action-btn"
-                    onClick={() => setIsReverifyOpen(true)}
-                  >
-                    {user?.status_verif === 'rejected' ? 'REINTENTAR VERIFICACIÓN' : 'VERIFICAR AHORA'}
-                  </button>
-                )}
               </div>
             </section>
 
             {/* SECCION: APP & MAPA */}
             <section className="settings-card">
               <div className="card-header">
-                <MapIcon size={20} />
-                <span>MAPA Y NAVEGACION</span>
+                <MapIcon size={20} color="var(--text-main)" />
+                <span>{t("settings.sec_map")}</span>
               </div>
+
               <div className="settings-item">
                 <div className="item-info">
-                  <span>Estilo del mapa</span>
-                  <small>Cambia la apariencia visual</small>
+                  <span>{t("settings.interface_mode")}</span>
+                  <small>{t("settings.interface_desc")}</small>
                 </div>
-                <select className="settings-select">
-                  <option>Alidade Smooth Dark</option>
-                  <option>Satellite View</option>
-                  <option>Streets</option>
-                </select>
+                <div
+                  className={`theme-switch ${!isDarkMode ? "active" : ""}`}
+                  onClick={toggleTheme}
+                >
+                  <div className="switch-handle">
+                    {isDarkMode ? (
+                      <Moon size={12} />
+                    ) : (
+                      <Sun size={12} color="#000" />
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="settings-item">
-                <div className="item-info">
-                  <span>Radio de busqueda</span>
-                  <small>Distancia maxima permitida</small>
+
+              <div
+                className="settings-item selectable"
+                onClick={() => setIsLangModalOpen(true)}
+              >
+                <div className="item-with-icon">
+                  <Globe size={20} color="var(--text-main)" />
+                  <div className="item-info">
+                    <span>{t("settings.interface_lang")}</span>
+                    <small>
+                      {i18n.language.startsWith("es")
+                        ? "Español (España)"
+                        : "English (US)"}
+                    </small>
+                  </div>
                 </div>
-                <input type="range" min="1" max="50" className="settings-range" />
+                <ChevronRight size={18} color="var(--text-muted)" />
               </div>
             </section>
 
-            {/* SECCION: IDIOMA */}
-            <section className="settings-card">
-              <div className="card-header">
-                <Globe size={20} />
-                <span>IDIOMA</span>
+            {/* SECCION: ZONA DE PELIGRO */}
+            <section className="settings-card danger-zone-card">
+              <div className="card-header danger">
+                <Trash2 size={20} />
+                <span>{t("settings.sec_danger")}</span>
               </div>
-              <div className="settings-item selectable">
+
+              <div className="settings-item danger-item">
                 <div className="item-info">
-                  <span>Idioma de la interfaz</span>
-                  <small>Español (España)</small>
+                  <span className="danger-title">
+                    {t("settings.delete_acc")}
+                  </span>
+                  <p className="danger-description">
+                    {t("settings.delete_acc_desc")}
+                  </p>
                 </div>
-                <ChevronRight size={18} />
+                <button
+                  className="delete-acc-btn"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                >
+                  {t("common.delete")}
+                </button>
               </div>
             </section>
 
-            {/* BOTON CERRAR SESION */}
             <button className="logout-full-btn" onClick={logout}>
               <LogOut size={20} />
-              CERRAR SESION
+              {t("settings.logout")}
             </button>
           </div>
         </div>
       </main>
 
+      {/* MODALES */}
+      <LanguageModal
+        isOpen={isLangModalOpen}
+        onClose={() => setIsLangModalOpen(false)}
+      />
 
       {isCreatePostOpen && (
         <CreatePostModal
@@ -189,9 +239,18 @@ const Settings = () => {
       )}
 
       {isReverifyOpen && (
-        <ReverifyModal 
-          onClose={() => setIsReverifyOpen(false)} 
-          onUpload={handleReverifySuccess} 
+        <ReverifyModal
+          onClose={() => setIsReverifyOpen(false)}
+          onUpload={handleReverifySuccess}
+        />
+      )}
+
+      {isDeleteModalOpen && (
+        <DeleteAccountModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDeleteAccount}
+          username={user?.username || ""}
         />
       )}
     </div>

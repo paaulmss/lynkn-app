@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { Camera, X, Smartphone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import QRCode from 'react-qr-code';
 import { io, Socket } from "socket.io-client";
 import './ReverifyModal.css';
@@ -10,6 +11,7 @@ interface ReverifyModalProps {
 }
 
 const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<'options' | 'camera' | 'qr'>('options');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [sessionId] = useState(() => `lynkn_reverify_${Date.now()}`);
@@ -20,6 +22,8 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
   const streamRef = useRef<MediaStream | null>(null);
 
   const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  const isDarkMode = localStorage.getItem("theme") !== "light";
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -69,7 +73,7 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
       }
     } catch (err) { 
       console.error("Error cámara:", err);
-      alert("No se pudo acceder a la cámara.");
+      alert(t('reverify.cam_error'));
       setMode('options');
     }
   };
@@ -88,12 +92,12 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
   };
 
   return (
-    <div className="modal-overlay blur">
+    <div className={`modal-overlay blur ${!isDarkMode ? 'light-mode' : ''}`}>
       <div className="reverify-content">
         <header className="reverify-header">
-          <h3>RE-VERIFICACIÓN</h3>
+          <h3>{t('reverify.title')}</h3>
           <button onClick={() => { stopCamera(); onClose(); }} className="close-btn">
-            <X size={20} />
+            <X size={20} color="var(--text-main)" />
           </button>
         </header>
 
@@ -103,10 +107,10 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
               {mode === 'options' && (
                 <div className="verification-options">
                   <button className="btn-verify-opt" onClick={startCamera}>
-                    <Camera size={20} /> USAR WEBCAM PC
+                    <Camera size={20} /> {t('reverify.use_pc')}
                   </button>
                   <button className="btn-verify-opt" onClick={() => setMode('qr')}>
-                    <Smartphone size={20} /> USAR MÓVIL (QR)
+                    <Smartphone size={20} /> {t('reverify.use_mobile')}
                   </button>
                 </div>
               )}
@@ -115,8 +119,10 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
                 <div className="video-wrapper">
                   <video ref={videoRef} autoPlay playsInline muted />
                   <div className="camera-ui-overlay">
-                    <button onClick={takePhoto} className="capture-btn">CAPTURAR</button>
-                    <button onClick={() => { stopCamera(); setMode('options'); }} className="btn-cancel-cam">VOLVER</button>
+                    <button onClick={takePhoto} className="capture-btn">{t('reverify.capture')}</button>
+                    <button onClick={() => { stopCamera(); setMode('options'); }} className="btn-cancel-cam">
+                      {t('common.back')}
+                    </button>
                   </div>
                 </div>
               )}
@@ -126,15 +132,22 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
                   {isReceiving ? (
                     <div className="loader-container">
                       <div className="loader"></div>
-                      <p>RECIBIENDO IMAGEN...</p>
+                      <p>{t('reverify.receiving')}</p>
                     </div>
                   ) : (
                     <div className="qr-container">
-                      <QRCode value={`${window.location.origin}/verify/${sessionId}`} size={180} />
-                      <p>Escanea para abrir la cámara en tu móvil</p>
+                      <div className="qr-bg-wrapper">
+                         <QRCode 
+                            value={`${window.location.origin}/verify/${sessionId}`} 
+                            size={180} 
+                            bgColor={isDarkMode ? "transparent" : "#ffffff"}
+                            fgColor={isDarkMode ? "#00f2ff" : "#000000"}
+                         />
+                      </div>
+                      <p>{t('reverify.qr_desc')}</p>
                     </div>
                   )}
-                  <button className="btn-cancel" onClick={() => setMode('options')}>CANCELAR</button>
+                  <button className="btn-cancel" onClick={() => setMode('options')}>{t('common.cancel')}</button>
                 </div>
               )}
             </>
@@ -143,10 +156,10 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
               <img src={capturedImage} alt="Capture" />
               <div className="preview-actions">
                 <button onClick={() => { setCapturedImage(null); setMode('options'); }} className="retry-btn">
-                  REPETIR
+                  {t('reverify.retry')}
                 </button>
                 <button onClick={() => onUpload(capturedImage)} className="confirm-btn">
-                  ENVIAR A REVISIÓN
+                  {t('reverify.send')}
                 </button>
               </div>
             </div>

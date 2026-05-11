@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CONTENEDOR PRINCIPAL DEL HEADER
+    CONTENEDOR PRINCIPAL DEL HEADER
    ========================================================================== */
 .profile-header {
   display: flex;
@@ -8,10 +8,11 @@
   gap: 40px;
   padding: 20px 0;
   margin-bottom: 44px;
+  transition: color 0.3s ease;
 }
 
 /* ==========================================================================
-   SECCIÓN DEL AVATAR (IZQUIERDA)
+    SECCION DEL AVATAR (IZQUIERDA)
    ========================================================================== */
 .avatar-section {
   flex: 0 0 auto;
@@ -24,8 +25,8 @@
   height: 150px;
   border-radius: 50%;
   padding: 3px;
-  background: linear-gradient(45deg, #00ffff, #0066ff);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  background: linear-gradient(45deg, var(--neon-glow), #0066ff);
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,12 +36,13 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 4px solid #000;
+  border: 4px solid var(--bg-dark);
   object-fit: cover;
+  background-color: var(--bg-surface);
 }
 
 /* ==========================================================================
-   SECCIÓN DE INFORMACIÓN (DERECHA)
+    SECCION DE INFORMACION (DERECHA)
    ========================================================================== */
 .info-section {
   flex: 1;
@@ -59,15 +61,15 @@
 .username-row h1 {
   font-size: 1.5rem;
   font-weight: 300;
-  color: #fff;
+  color: var(--text-main);
   margin: 0;
 }
 
 /* Botón Editar Perfil */
 .edit-profile-action-btn {
-  background: #18181b;
-  border: 1px solid #27272a;
-  color: #fff;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-main);
   padding: 6px 16px;
   border-radius: 8px;
   font-size: 0.85rem;
@@ -77,8 +79,8 @@
 }
 
 .edit-profile-action-btn:hover {
-  background: #27272a;
-  border-color: #3f3f46;
+  background: var(--bg-input);
+  border-color: var(--text-muted);
 }
 
 .stats-row {
@@ -88,11 +90,11 @@
 
 .stats-row span {
   font-size: 1rem;
-  color: #efeff1;
+  color: var(--text-main);
 }
 
 .stats-row strong {
-  color: #fff;
+  color: var(--text-main);
   font-weight: 700;
 }
 
@@ -105,13 +107,13 @@
 .bio-row .name {
   font-weight: 700;
   font-size: 0.95rem;
-  color: #fff;
+  color: var(--text-main);
   margin-bottom: 2px;
 }
 
 .bio-row p {
   font-size: 0.95rem;
-  color: #efeff1;
+  color: var(--text-main);
   margin: 0;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -121,53 +123,87 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #a8a8a8;
+  color: var(--text-muted);
   margin-top: 8px;
   font-size: 0.85rem;
 }
 
-.verification-status-row {
-    margin: 5px 0 15px 0;
+.profile-header-component.light-mode .profile-username {
+  color: #000;
 }
 
-.verif-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
+.profile-header-component.light-mode .edit-profile-action-btn {
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  color: #000;
 }
 
-.verif-badge.approved { background: #22c55e; color: #fff; }
-.verif-badge.pending { background: #f59e0b; color: #fff; }
-.verif-badge.rejected { background: #ef4444; color: #fff; }
-
-.reverify-action-btn {
-    background: #ffffff;
-    color: #000;
-    border: none;
-    padding: 0 15px;
-    height: 32px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+.profile-header-component.light-mode .edit-profile-action-btn:hover {
+  background: #e4e4e7;
 }
 
-.reverify-action-btn:hover {
-    background: #e4e4e7;
-    transform: translateY(-1px);
+.profile-header-component.light-mode .reverify-action-btn {
+  background: #000;
+  color: #fff;
+  border: none;
+}
+
+.profile-header-component.light-mode .bio-text,
+.profile-header-component.light-mode .stat-item {
+  color: #3f3f46;
+}
+
+.profile-header-component.light-mode .avatar-wrapper {
+  border: 2px solid #f4f4f5;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 /* ==========================================================================
-   RESPONSIVE (MÓVIL)
+    VERIFICACION Y BOTONES DE ACCION
+   ========================================================================== */
+.verification-status-row {
+  margin: 5px 0 5px 0;
+}
+
+.verif-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.verif-badge.approved { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.verif-badge.pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.verif-badge.rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+.reverify-action-btn {
+  background: var(--text-main);
+  color: var(--bg-dark);
+  border: none;
+  padding: 0 15px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reverify-action-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+    RESPONSIVE (MOVIL)
    ========================================================================== */
 @media (max-width: 768px) {
   .profile-header {
@@ -178,8 +214,8 @@
   }
 
   .avatar-wrapper {
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
   }
 
   .username-row {

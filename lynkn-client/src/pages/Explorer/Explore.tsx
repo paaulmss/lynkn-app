@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Map as MapIcon, LayoutList, Menu, Search, Filter } from "lucide-react";
@@ -46,6 +47,7 @@ interface UserData {
 }
 
 const SecurityOverlay = ({ user }: { user: UserData | null }) => {
+  const { t } = useTranslation();
   const isAccessGranted =
     user?.role === "admin" || user?.status_verif === "approved";
   if (!user || isAccessGranted) return null;
@@ -55,23 +57,18 @@ const SecurityOverlay = ({ user }: { user: UserData | null }) => {
       <div className="lock-content">
         {user.status_verif === "pending" ? (
           <>
-            <h2>ACCESO EN REVISIÓN</h2>
-            <p>
-              Tu solicitud está siendo validada. El acceso se activará tras la
-              aprobación.
-            </p>
+            <h2>{t('explore.security.pending_title')}</h2>
+            <p>{t('explore.security.pending_desc')}</p>
           </>
         ) : (
           <>
-            <h2>ACCESO DENEGADO</h2>
-            <p>
-              Tu identidad no pudo ser verificada. El acceso está restringido.
-            </p>
+            <h2>{t('explore.security.denied_title')}</h2>
+            <p>{t('explore.security.denied_desc')}</p>
             <button
               className="reverify-btn"
               onClick={() => (window.location.href = "/profile")}
             >
-              VOLVER A VERIFICAR
+              {t('explore.security.reverify')}
             </button>
           </>
         )}
@@ -82,10 +79,13 @@ const SecurityOverlay = ({ user }: { user: UserData | null }) => {
 
 const Explore = () => {
   const { user, isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useAuth();
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"map" | "posts">("map");
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+  const isDarkMode = localStorage.getItem("theme") !== "light";
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -117,26 +117,22 @@ const Explore = () => {
 
   useEffect(() => {
     let isMounted = true;
-
     if (user?.id) {
       const load = async () => {
-        if (isMounted) {
-          await fetchPostsAndStatus();
-        }
+        if (isMounted) await fetchPostsAndStatus();
       };
       load();
     }
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [fetchPostsAndStatus, user?.id]);
 
   useEffect(() => {
     if (viewMode !== "map" || !mapContainer.current) return;
 
     const API_KEY = import.meta.env.VITE_STADIA_API_KEY;
-    const mapStyle = `https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json${API_KEY ? `?api_key=${API_KEY}` : ""}`;
+    
+    const styleName = isDarkMode ? "alidade_smooth_dark" : "alidade_smooth";
+    const mapStyle = `https://tiles.stadiamaps.com/styles/${styleName}.json${API_KEY ? `?api_key=${API_KEY}` : ""}`;
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
@@ -155,7 +151,7 @@ const Explore = () => {
       map.current?.remove();
       map.current = null;
     };
-  }, [viewMode]);
+  }, [viewMode, isDarkMode]);
 
   useEffect(() => {
     if (!map.current || posts.length === 0) return;
@@ -172,14 +168,14 @@ const Explore = () => {
       const marker = new maplibregl.Marker(el)
         .setLngLat([post.lng, post.lat])
         .setPopup(
-          new maplibregl.Popup({ offset: 25, className: "custom-popup-dark" })
+          new maplibregl.Popup({ offset: 25, className: "custom-popup-theme" })
             .setHTML(`
             <div class="popup-card-explore">
               <img src="${post.image_url}" alt="${post.title}" />
               <div class="popup-body-explore">
                 <strong>${post.title}</strong>
                 <span class="status-label-${post.userStatus}">${post.userStatus === "available" ? "" : post.userStatus?.toUpperCase()}</span>
-                <button class="popup-view-btn" id="btn-${post.id}">VER DETALLES</button>
+                <button class="popup-view-btn" id="btn-${post.id}">${t('explore.details_btn')}</button>
               </div>
             </div>
           `),
@@ -193,7 +189,7 @@ const Explore = () => {
 
       markers.current.push(marker);
     });
-  }, [posts, viewMode]);
+  }, [posts, viewMode, isDarkMode, t]);
 
   useEffect(() => {
     const timer = setTimeout(() => map.current?.resize(), 300);
@@ -203,7 +199,7 @@ const Explore = () => {
   const isLocked = user?.role !== "admin" && user?.status_verif !== "approved";
 
   return (
-    <div className="explore-container">
+    <div className={`explore-container ${!isDarkMode ? 'light-mode' : ''}`}>
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -218,12 +214,12 @@ const Explore = () => {
             onClick={toggleSidebar}
             type="button"
           >
-            <Menu color="white" size={24} />
+            <Menu color={isDarkMode ? "white" : "black"} size={24} />
           </button>
           <div className="search-bar">
-            <Search size={18} color="#71717a" />
-            <input type="text" placeholder="BUSCAR EVENTOS, GRUPOS..." />
-            <Filter size={18} color="#71717a" />
+            <Search size={18} color="var(--text-muted)" />
+            <input type="text" placeholder={t('explore.search_placeholder')} />
+            <Filter size={18} color="var(--text-muted)" />
           </div>
         </header>
 
@@ -250,13 +246,13 @@ const Explore = () => {
             className={`switch-nav-btn ${viewMode === "map" ? "active" : ""}`}
             onClick={() => setViewMode("map")}
           >
-            <MapIcon size={18} /> MAPA
+            <MapIcon size={18} /> {t('explore.btn_map')}
           </button>
           <button
             className={`switch-nav-btn ${viewMode === "posts" ? "active" : ""}`}
             onClick={() => setViewMode("posts")}
           >
-            <LayoutList size={18} /> POSTS
+            <LayoutList size={18} /> {t('explore.btn_posts')}
           </button>
         </div>
       </main>

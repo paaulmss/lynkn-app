@@ -19,7 +19,7 @@ export class AuthService {
     const { email, username, password, foto_perfil, selfie, birth_day } = userData;
 
     if (!birth_day) {
-      throw new BadRequestException('La fecha de nacimiento es obligatoria');
+      throw new BadRequestException('ERR_BIRTH_REQUIRED');
     }
 
     const birthDate = new Date(birth_day);
@@ -32,25 +32,24 @@ export class AuthService {
     }
 
     if (age < 18) {
-      throw new BadRequestException('Debes ser mayor de 18 años para registrarte en LYNKN');
+      throw new BadRequestException('ERR_UNDERAGE');
     }
 
     const existingUserByEmail = await this.usersService.findByEmail(email);
     if (existingUserByEmail) {
-      throw new ConflictException('El correo electrónico ya está registrado');
+      throw new ConflictException('ERR_EMAIL_EXISTS');
     }
 
     const existingUserByUsername = await this.usersService.findByUsername(username.toLowerCase());
     if (existingUserByUsername) {
-      throw new ConflictException('El nombre de usuario ya está en uso');
+      throw new ConflictException('ERR_USERNAME_EXISTS');
     }
 
     if (password.length < 8) {
-      throw new BadRequestException('La contraseña es demasiado corta');
+      throw new BadRequestException('ERR_PWD_SHORT');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const statusVerif = selfie ? 'pending' : 'unverified';
 
     const newUser = await this.usersService.create({
       email,
@@ -77,35 +76,32 @@ export class AuthService {
   }
 
   async checkAvailability(email: string, username: string) {
-    // 1. Verificar Email
     const userByEmail = await this.usersService.findByEmail(email);
     if (userByEmail) {
-      throw new ConflictException('El correo electrónico ya está registrado');
+      throw new ConflictException('ERR_EMAIL_EXISTS');
     }
 
-    // 2. Verificar Username
     const userByUsername = await this.usersService.findByUsername(username.toLowerCase());
     if (userByUsername) {
-      throw new ConflictException('El nombre de usuario ya está en uso');
+      throw new ConflictException('ERR_USERNAME_EXISTS');
     }
 
     return { available: true };
   }
 
-  /* LOGIN MANUAL*/
+  /* LOGIN MANUAL */
   async login(loginData: any) {
     const { identifier, password } = loginData;
 
-    // Buscamos al usuario por email o por username
     const user = await this.usersService.findByIdentifier(identifier);
 
     if (!user || !user.pwd) {
-      throw new ForbiddenException('Credenciales incorrectas');
+      throw new ForbiddenException('ERR_INVALID_CREDENTIALS');
     }
 
     const isMatch = await bcrypt.compare(password, user.pwd);
     if (!isMatch) {
-      throw new ForbiddenException('Credenciales incorrectas');
+      throw new ForbiddenException('ERR_INVALID_CREDENTIALS');
     }
 
     const jwtPayload = {
@@ -140,8 +136,6 @@ export class AuthService {
         } as any);
       }
 
-     
-
       const jwtPayload = {
         sub: user.id,
         email: user.email,
@@ -154,7 +148,7 @@ export class AuthService {
         user,
       };
     } catch (error) {
-      throw new ForbiddenException('Token de Google no válido');
+      throw new ForbiddenException('ERR_GOOGLE_TOKEN_INVALID');
     }
   }
 }

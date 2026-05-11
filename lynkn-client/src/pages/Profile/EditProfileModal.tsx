@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { ChangeEvent, FormEvent } from "react"; 
 import { X, UploadCloud, User, MapPin, AlignLeft } from "lucide-react";
 import api from "../../api/axiosConfig";
@@ -19,10 +20,13 @@ interface EditProfileModalProps {
 }
 
 const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) => {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string>(user?.foto_perfil || "https://via.placeholder.com/150");
+  const [previewImage, setPreviewImage] = useState<string>(user?.foto_perfil || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix");
   
+  const isDarkMode = localStorage.getItem("theme") !== "light";
+
   const [formData, setFormData] = useState({
     username: user?.username || "",
     bio: user?.bio || "",
@@ -34,7 +38,7 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert("La imagen es demasiado grande. Máximo 2MB.");
+        alert(t('edit_profile.err_size'));
         return;
       }
 
@@ -51,31 +55,30 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.username.trim()) {
-      alert("El nombre de usuario es obligatorio.");
+      alert(t('edit_profile.err_username'));
       return;
     }
 
     setIsSaving(true);
     try {
       await api.put(`/users/${user.id}/profile`, formData);
-      
       onSuccess(); 
       onClose();
     } catch (error) {
       console.error("Error al actualizar perfil:", error);
-      alert("No se pudieron guardar los cambios. Inténtalo de nuevo.");
+      alert(t('edit_profile.err_save'));
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="modal-overlay blur" onClick={onClose}>
+    <div className={`modal-overlay blur ${!isDarkMode ? 'light-mode' : ''}`} onClick={onClose}>
       <div className="edit-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="edit-modal-header">
-          <h3>EDITAR PERFIL</h3>
+          <h3>{t('edit_profile.title')}</h3>
           <button className="close-btn" onClick={onClose} type="button">
-            <X size={20} color="white" />
+            <X size={20} color="var(--text-main)" />
           </button>
         </div>
         
@@ -86,7 +89,7 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
                 src={previewImage} 
                 alt="Vista previa perfil" 
                 className="avatar-preview-img" 
-                onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/150" }}
+                onError={(e) => { (e.target as HTMLImageElement).src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" }}
               />
               <div className="avatar-overlay-icon">
                 <UploadCloud size={24} color="white" />
@@ -97,7 +100,7 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
               className="change-photo-btn" 
               onClick={() => fileInputRef.current?.click()}
             >
-              CAMBIAR FOTO
+              {t('edit_profile.change_photo')}
             </button>
             <input 
               type="file" 
@@ -109,36 +112,39 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
           </div>
 
           <div className="form-group">
-            <label><User size={14} /> NOMBRE DE USUARIO</label>
+            <label><User size={14} color="var(--text-muted)" /> {t('edit_profile.username')}</label>
             <input 
               type="text" 
-              placeholder="Tu nombre público..."
+              placeholder={t('edit_profile.username_placeholder')}
               value={formData.username} 
               onChange={(e) => setFormData({...formData, username: e.target.value})} 
               required
               maxLength={25}
+              className="edit-input"
             />
           </div>
 
           <div className="form-group">
-            <label><MapPin size={14} /> UBICACIÓN</label>
+            <label><MapPin size={14} color="var(--text-muted)" /> {t('edit_profile.location')}</label>
             <input 
               type="text" 
-              placeholder="Ej: Madrid, España"
+              placeholder={t('edit_profile.location_placeholder')}
               value={formData.location} 
               onChange={(e) => setFormData({...formData, location: e.target.value})} 
               maxLength={50}
+              className="edit-input"
             />
           </div>
 
           <div className="form-group">
-            <label><AlignLeft size={14} /> BIO</label>
+            <label><AlignLeft size={14} color="var(--text-muted)" /> {t('edit_profile.bio')}</label>
             <textarea 
-              placeholder="Cuéntanos un poco sobre ti..."
+              placeholder={t('edit_profile.bio_placeholder')}
               value={formData.bio} 
               onChange={(e) => setFormData({...formData, bio: e.target.value})} 
               rows={3}
               maxLength={160}
+              className="edit-textarea"
             />
             <small className="char-count">{formData.bio.length}/160</small>
           </div>
@@ -150,10 +156,10 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
               onClick={onClose}
               disabled={isSaving}
             >
-              CANCELAR
+              {t('common.cancel')}
             </button>
             <button type="submit" className="save-btn" disabled={isSaving}>
-              {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
+              {isSaving ? t('edit_profile.saving') : t('edit_profile.save_btn')}
             </button>
           </div>
         </form>
