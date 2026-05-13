@@ -5,6 +5,7 @@ import { Menu, BellOff } from "lucide-react";
 import NotificationItem from "./NotificationItem";
 import Sidebar from "../../components/Sidebar";
 import CreatePostModal from "../../components/posts/CreatePostModal";
+import api from "../../api/axiosConfig";
 import "./NotificationsPage.css";
 
 interface Notification {
@@ -34,11 +35,7 @@ const NotificationsPage = () => {
   const markAllAsRead = useCallback(async () => {
     try {
       if (!user?.id) return;
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-      await fetch(
-        `${apiUrl}/notifications/user/${user.id}/mark-read`,
-        { method: "PATCH" }
-      );
+      await api.patch(`/notifications/user/${user.id}/mark-read`);
     } catch (err) {
       console.error("Error al marcar como leídas:", err);
     }
@@ -47,9 +44,8 @@ const NotificationsPage = () => {
   const fetchNotifications = useCallback(async () => {
     try {
       if (!user?.id) return;
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-      const response = await fetch(`${apiUrl}/notifications/user/${user.id}`);
-      const data = await response.json();
+      const response = await api.get(`/notifications/user/${user.id}`);
+      const data = response.data;
       setNotifications(data || []);
       if (data && data.length > 0) {
         markAllAsRead();

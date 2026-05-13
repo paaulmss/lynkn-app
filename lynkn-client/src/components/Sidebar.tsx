@@ -14,6 +14,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import AppLogo from './AppLogo';
+import api from '../api/axiosConfig';
 import './Sidebar.css';
 
 interface SidebarProps {
@@ -34,8 +35,8 @@ const Sidebar = ({ isOpen, onClose, activePage, onNewPostClick }: SidebarProps) 
     const fetchUnreadCount = async () => {
       try {
         if (!user?.id) return;
-        const response = await fetch(`http://localhost:4000/notifications/user/${user.id}/unread-count`);
-        const data = await response.json();
+        const response = await api.get(`/notifications/user/${user.id}/unread-count`);
+        const data = response.data;
         setUnreadCount(data.count);
       } catch (err) {
         console.error("Error al obtener conteo de notificaciones:", err);

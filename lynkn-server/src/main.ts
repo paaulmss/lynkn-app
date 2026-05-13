@@ -8,7 +8,13 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.enableCors({
-    origin: ['https://lynkn-app.vercel.app', 'http://localhost:5173'],
+    origin: [
+      'https://lynkn-app.vercel.app',
+      'http://localhost:5173',
+      'capacitor://localhost',
+      'https://localhost',
+      'http://localhost',
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
@@ -22,7 +28,7 @@ async function bootstrap() {
 
  const port = process.env.PORT || 10000;
 
- await app.listen(port);
+ await app.listen(port, '0.0.0.0');
 
   console.log(`Servidor LYNKN operacional en el puerto: ${port}`);
 }

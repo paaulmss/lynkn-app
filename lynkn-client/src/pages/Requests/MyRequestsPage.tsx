@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import { useAuth } from "../../hooks/useAuth";
+import api from "../../api/axiosConfig";
 import "./MyRequestsPage.css";
 
 // Interfaz para el modal
@@ -49,22 +50,20 @@ const MyRequestsPage = () => {
     requestId: null
   });
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
   const isDarkMode = localStorage.getItem("theme") !== "light";
 
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) return;
-      const response = await fetch(`${apiUrl}/posts/user-requests/${user.id}`);
-      const data = await response.json();
-      setRequests(data);
+      const response = await api.get(`/posts/user-requests/${user.id}`);
+      setRequests(response.data);
     } catch (error) {
       console.error("Error al cargar solicitudes:", error);
     } finally {
       setLoading(false);
     }
-  }, [user?.id, apiUrl]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchRequests();
@@ -80,11 +79,9 @@ const MyRequestsPage = () => {
     if (!participationId) return;
 
     try {
-      const response = await fetch(`${apiUrl}/posts/participation/${participationId}`, {
-        method: "DELETE",
-      });
+      const response = await api.delete(`/posts/participation/${participationId}`);
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         setRequests((prev) => prev.filter((r) => r.id !== participationId));
         setConfirmModal({ isOpen: false, requestId: null });
       }

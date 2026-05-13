@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { API_BASE_URL } from "../../api/axiosConfig";
 
 interface ServerResponse {
   status: "ok" | "error";
@@ -14,7 +15,7 @@ const VerifyMobile: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [status, setStatus] = useState<"idle" | "uploading" | "success">("idle");
 
-  const SERVER_URL = "https://lynkn-backend.onrender.com";
+  const SERVER_URL = API_BASE_URL;
 
   const socket: Socket = useMemo(
     () =>

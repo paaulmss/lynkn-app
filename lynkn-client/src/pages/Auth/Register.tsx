@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "../../api/axiosConfig";
+import { API_BASE_URL } from "../../api/axiosConfig";
 import { loadModels, compareFaces } from "../../services/faceRecognition";
 import PublicPreferenceControls from "../../components/PublicPreferenceControls";
 import AppLogo from "../../components/AppLogo";
@@ -97,7 +98,7 @@ const Register = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const birthDateRef = useRef<HTMLInputElement>(null);
-  const SERVER_URL = "https://lynkn-backend.onrender.com";
+  const SERVER_URL = API_BASE_URL;
 
   useEffect(() => {
     loadModels()

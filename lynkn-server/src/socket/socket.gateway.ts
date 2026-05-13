@@ -15,7 +15,13 @@ interface MessageData { postId: number; senderId: number; content: string; }
 
 @WebSocketGateway({
   cors: {
-    origin: ['https://lynkn-app.vercel.app', 'http://localhost:5173'],
+    origin: [
+      'https://lynkn-app.vercel.app',
+      'http://localhost:5173',
+      'capacitor://localhost',
+      'https://localhost',
+      'http://localhost',
+    ],
     credentials: true,
   },
   transports: ['polling', 'websocket'],

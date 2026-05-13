@@ -1,10 +1,9 @@
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 import i18n from '../i18n';
+import { API_BASE_URL } from '../api/axiosConfig';
 
-const SOCKET_URL = import.meta.env.PROD 
-  ? 'https://lynkn-backend.onrender.com'
-  : 'http://localhost:3000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_BASE_URL;
 
 export interface ServerMessage {
   id: number;
