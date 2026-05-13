@@ -4,6 +4,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100svh;
   background-color: var(--bg-dark);
   overflow: hidden;
   padding: 24px;
@@ -314,16 +315,36 @@ body.light-mode .login-footer {
 
 @media (max-width: 480px) {
   .login-container {
-    align-items: stretch;
-    padding: 14px;
+    align-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    overflow-y: auto;
   }
 
   .login-card {
     align-self: center;
-    padding: 2rem 1.25rem;
+    padding: 1.6rem 1.1rem;
+    max-width: 100%;
+    border-radius: 16px;
+  }
+
+  .auth-logo {
+    width: 136px;
+    height: 42px;
   }
 
   .login-subtitle {
     letter-spacing: 1px;
+    margin-bottom: 1.5rem;
+    line-height: 1.35;
+  }
+
+  .form-group-login {
+    margin-bottom: 1rem;
+  }
+
+  .form-group-login input,
+  .btn-login-submit,
+  .btn-google-login {
+    min-height: 48px;
   }
 }

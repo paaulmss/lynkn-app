@@ -54,6 +54,7 @@ body.light-mode {
 html, body, #root {
   width: 100%;
   min-height: 100vh;
+  min-height: 100svh;
   background-color: var(--bg-dark);
   color: var(--text-main);
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -66,6 +67,7 @@ html {
 body {
   display: block; 
   overflow-x: hidden;
+  overscroll-behavior-y: none;
 }
 
 h1, h2, h3 {
@@ -90,6 +92,7 @@ button {
   border: none;
   font-family: inherit;
   outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 img,
@@ -150,6 +153,11 @@ select {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --page-gutter: 14px;
+    --nav-height: 64px;
+  }
+
   html {
     font-size: 15px;
   }
@@ -158,6 +166,7 @@ select {
     gap: 10px !important;
     padding-left: 14px !important;
     padding-right: 14px !important;
+    min-height: 64px;
   }
 
   .search-bar {

@@ -4,6 +4,7 @@
   color: var(--text-main);
   width: 100%;
   height: 100vh;
+  height: 100svh;
   overflow-y: scroll;
   scroll-behavior: smooth;
   scroll-snap-type: y mandatory; 
@@ -19,6 +20,7 @@
 .manifesto-section, 
 .home-footer {
   height: 100vh;
+  height: 100svh;
   width: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: normal;
@@ -256,6 +258,7 @@
     padding: 20px;
     align-items: flex-start;
     gap: 18px;
+    flex-wrap: wrap;
   }
   
   .auth-group {
@@ -285,6 +288,18 @@
   .hero-main-text h1 {
     font-size: clamp(3rem, 17vw, 4.8rem);
     overflow-wrap: anywhere;
+    letter-spacing: 0;
+  }
+
+  .hero-main-text h2 {
+    font-size: 1rem;
+    max-width: 92vw;
+  }
+
+  .upgrade-text {
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+    line-height: 1.35;
   }
 
   .hero-footer {
@@ -311,6 +326,7 @@ body.light-mode .manifesto-section {
 @media (max-width: 420px) {
   .hero-header {
     align-items: center;
+    padding: 16px 14px;
   }
 
   .home-logo {
@@ -321,6 +337,7 @@ body.light-mode .manifesto-section {
   .home-actions {
     width: 100%;
     justify-content: center;
+    margin-left: 0;
   }
 
   .auth-group {
@@ -331,5 +348,10 @@ body.light-mode .manifesto-section {
   .btn-login,
   .btn-register {
     flex: 1;
+    min-width: 0;
+  }
+
+  .hero-overlay {
+    padding: 132px 14px 24px;
   }
 }

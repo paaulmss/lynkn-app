@@ -650,4 +650,43 @@
   .admin-metrics-grid {
     grid-template-columns: 1fr;
   }
+
+  .admin-topbar h1 {
+    font-size: clamp(2rem, 14vw, 3.2rem);
+  }
+
+  .admin-tabs {
+    border-radius: 14px;
+  }
+
+  .admin-dashboard .admin-tabs .p-tabview-nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .admin-dashboard .admin-tabs .p-tabview-nav li {
+    flex: 0 0 auto;
+  }
+
+  .admin-dashboard .admin-tabs .p-tabview-panels {
+    padding: 12px;
+  }
+
+  .admin-table {
+    overflow-x: auto;
+  }
+
+  .admin-activity-item {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .admin-activity-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .admin-activity-list::before {
+    left: 20px;
+  }
 }

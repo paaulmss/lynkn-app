@@ -609,7 +609,7 @@ body.light-mode .edit-modal-content {
   }
 
   .posts-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
     gap: 10px;
   }
 
@@ -621,6 +621,23 @@ body.light-mode .edit-modal-content {
 
   .map-post-balloon {
     width: min(86vw, 320px);
+  }
+}
+
+@media (max-width: 520px) {
+  .follow-list-item {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .follow-list-item button {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .follow-modal {
+    width: calc(100vw - 18px);
+    max-height: calc(100svh - 18px);
   }
 }
 

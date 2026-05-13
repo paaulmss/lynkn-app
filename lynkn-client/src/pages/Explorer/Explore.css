@@ -767,6 +767,7 @@ body.light-mode .filter-toggle-btn span {
 @media (max-width: 768px) {
   .top-navbar {
     padding: 14px;
+    align-items: stretch;
   }
 
   .search-bar {
@@ -780,7 +781,7 @@ body.light-mode .filter-toggle-btn span {
   }
 
   .explore-posts-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr));
     padding: 18px 12px 112px;
     gap: 10px;
   }
@@ -794,10 +795,45 @@ body.light-mode .filter-toggle-btn span {
     flex: 1;
     justify-content: center;
     padding: 14px 10px;
+    min-width: 0;
   }
 
   .security-lock-overlay h2 {
     font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .top-navbar {
+    flex-wrap: wrap;
+  }
+
+  .icon-btn.menu-trigger {
+    width: 46px;
+    height: 46px;
+  }
+
+  .search-bar {
+    order: 2;
+    flex-basis: 100%;
+  }
+
+  .explore-filter-panel,
+  .profile-search-panel {
+    max-height: 44svh;
+    overflow-y: auto;
+  }
+
+  .profile-search-results {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-search-card {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-search-follow {
+    width: 100%;
   }
 }
 

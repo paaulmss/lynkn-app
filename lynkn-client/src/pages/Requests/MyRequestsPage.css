@@ -313,6 +313,20 @@ body.light-mode .request-card {
     height: 140px;
   }
 
+  .requests-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .request-content {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .custom-confirm-card {
+    width: calc(100vw - 24px);
+    padding: 2rem 1.2rem;
+  }
+
   .modal-actions-row {
     flex-direction: column;
   }

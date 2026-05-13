@@ -332,6 +332,7 @@ body.light-mode .danger-zone-card {
 
   .settings-card {
     padding: 18px;
+    border-radius: 16px;
   }
 
   .settings-item,
@@ -349,5 +350,11 @@ body.light-mode .danger-zone-card {
   .delete-acc-btn,
   .verify-action-btn {
     min-height: 44px;
+  }
+
+  .logout-full-btn {
+    min-height: 52px;
+    padding: 14px;
+    letter-spacing: 1px;
   }
 }
