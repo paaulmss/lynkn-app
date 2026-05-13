@@ -3,6 +3,8 @@ import { Camera, X, Smartphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'react-qr-code';
 import { io, Socket } from "socket.io-client";
+import { toast } from 'sonner';
+import { API_BASE_URL } from '../../api/axiosConfig';
 import './ReverifyModal.css';
 
 interface ReverifyModalProps {
@@ -21,7 +23,7 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const SERVER_URL = API_BASE_URL;
 
   const isDarkMode = localStorage.getItem("theme") !== "light";
 
@@ -73,7 +75,7 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
       }
     } catch (err) { 
       console.error("Error cámara:", err);
-      alert(t('reverify.cam_error'));
+      toast.error(t('reverify.cam_error'));
       setMode('options');
     }
   };

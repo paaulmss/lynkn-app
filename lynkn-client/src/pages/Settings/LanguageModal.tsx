@@ -10,8 +10,8 @@ interface LanguageModalProps {
 }
 
 const languages = [
-  { code: 'es', name: 'Español (España)', flag: '🇪🇸' },
-  { code: 'en', name: 'English (US)', flag: '🇺🇸' }
+  { code: 'es', nameKey: 'settings.languages.es', flag: '🇪🇸' },
+  { code: 'en', nameKey: 'settings.languages.en', flag: '🇺🇸' }
 ] as const; // 'as const' ayuda a que TS sepa que estos valores son fijos
 
 const LanguageModal: React.FC<LanguageModalProps> = ({ isOpen, onClose }) => {
@@ -49,7 +49,7 @@ const LanguageModal: React.FC<LanguageModalProps> = ({ isOpen, onClose }) => {
             >
               <div className="lang-info">
                 <span className="lang-flag">{lang.flag}</span>
-                <span className="lang-name">{lang.name}</span>
+                <span className="lang-name">{t(lang.nameKey)}</span>
               </div>
               {i18n.language.startsWith(lang.code) && (
                 <Check size={18} color={isDarkMode ? "var(--neon-glow)" : "#000"} />

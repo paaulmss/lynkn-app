@@ -20,6 +20,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   bio: string;
 
+  @Column({ type: 'text', nullable: true })
+  location: string;
+
   @Column({ name: 'birth_day', type: 'date', nullable: true })
   birthDay: string;
 
@@ -46,4 +49,16 @@ export class User {
 
   @Column({ name: 'google_id', nullable: true })
   googleId: string;
+
+  @Column({ name: 'supabase_auth_id', type: 'uuid', nullable: true })
+  supabaseAuthId: string;
+
+  @Column({ nullable: true })
+  phone: string;
+
+  @Column({ name: 'terms_accepted', default: false })
+  termsAccepted: boolean;
+
+  @Column({ name: 'terms_accepted_at', type: 'timestamptz', nullable: true })
+  termsAcceptedAt: Date;
 }

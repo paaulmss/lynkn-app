@@ -29,8 +29,66 @@ export class PostsService {
     if (error) console.error("Error al crear notificación:", error.message);
   }
 
+  async findCategories() {
+    const { data, error } = await this.supabase
+      .from("event_categories")
+      .select("slug, label_es, label_en, icon, color, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return data || [];
+  }
+
+  async categoryExists(slug: string) {
+    const { data, error } = await this.supabase
+      .from("event_categories")
+      .select("slug")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      throw new InternalServerErrorException(error.message);
+    }
+
+    return Boolean(data);
+  }
+
+  private async enrichPostsSocial(posts: any[], viewerId?: number) {
+    if (!posts.length) return posts;
+
+    const postIds = posts.map((post) => post.id);
+    const { data: favorites, error } = await this.supabase
+      .from("post_favorites")
+      .select("post_id, user_id")
+      .in("post_id", postIds);
+
+    if (error) throw new InternalServerErrorException(error.message);
+
+    const countMap = new Map<number, number>();
+    const viewerFavoriteSet = new Set<number>();
+
+    (favorites || []).forEach((favorite: any) => {
+      countMap.set(favorite.post_id, (countMap.get(favorite.post_id) || 0) + 1);
+      if (viewerId && Number(favorite.user_id) === Number(viewerId)) {
+        viewerFavoriteSet.add(favorite.post_id);
+      }
+    });
+
+    return posts.map((post) => ({
+      ...post,
+      favorite_count: countMap.get(post.id) || 0,
+      is_favorited: viewerFavoriteSet.has(post.id),
+    }));
+  }
+
   async createPost(file: Express.Multer.File, body: any) {
     let imageUrl: string | null = null;
+    const requestedCategory = String(body.category || "general").trim();
+    const category = await this.categoryExists(requestedCategory)
+      ? requestedCategory
+      : "general";
 
     if (file) {
       const fileExt = file.originalname.split(".").pop();
@@ -69,7 +127,7 @@ export class PostsService {
           lng: parseFloat(body.lng) || -3.7037,
           max_particip: body.max_participants ? parseInt(body.max_participants) : 0,
           current_particip: 0,
-          category: body.category || "general",
+          category,
           event_date: body.event_date || new Date().toISOString(),
           status: "active",
           is_visible: true,
@@ -100,7 +158,7 @@ export class PostsService {
     return postArray;
   }
 
-  async findAll(excludeUserId?: number) {
+  async findAll(excludeUserId?: number, viewerId?: number) {
     let query = this.supabase
       .from("posts")
       .select("*, users (username, foto_perfil)")
@@ -113,10 +171,10 @@ export class PostsService {
     const { data, error } = await query.order("id", { ascending: false });
 
     if (error) throw new InternalServerErrorException(error.message);
-    return data || [];
+    return this.enrichPostsSocial(data || [], viewerId);
   }
 
-  async findByUser(userId: number) {
+  async findByUser(userId: number, viewerId?: number) {
     const { data, error } = await this.supabase
       .from("posts")
       .select("*, users (username, foto_perfil)")
@@ -124,7 +182,54 @@ export class PostsService {
       .eq("is_visible", true)
       .order("id", { ascending: false });
     if (error) throw new InternalServerErrorException(error.message);
-    return data || [];
+    return this.enrichPostsSocial(data || [], viewerId);
+  }
+
+  async addFavorite(postId: number, userId: number) {
+    const { error } = await this.supabase
+      .from("post_favorites")
+      .upsert([{ post_id: postId, user_id: userId }], { onConflict: "user_id,post_id" });
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return this.getPostSocial(postId, userId);
+  }
+
+  async removeFavorite(postId: number, userId: number) {
+    const { error } = await this.supabase
+      .from("post_favorites")
+      .delete()
+      .eq("post_id", postId)
+      .eq("user_id", userId);
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return this.getPostSocial(postId, userId);
+  }
+
+  async getFavoritePosts(userId: number) {
+    const { data, error } = await this.supabase
+      .from("post_favorites")
+      .select("posts (*, users (username, foto_perfil))")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw new InternalServerErrorException(error.message);
+    const posts = (data || []).map((item: any) => item.posts).filter(Boolean);
+    return this.enrichPostsSocial(posts, userId);
+  }
+
+  async getPostSocial(postId: number, userId?: number) {
+    const { data, error } = await this.supabase
+      .from("post_favorites")
+      .select("user_id")
+      .eq("post_id", postId);
+
+    if (error) throw new InternalServerErrorException(error.message);
+
+    return {
+      post_id: postId,
+      favorite_count: data?.length || 0,
+      is_favorited: userId ? (data || []).some((favorite: any) => Number(favorite.user_id) === Number(userId)) : false,
+    };
   }
 
   async getUserRequests(userId: number) {
@@ -132,6 +237,7 @@ export class PostsService {
     .from("participations")
     .select(`
       id,
+      post_id,
       status,
       user_id,
       posts (
@@ -164,13 +270,32 @@ export class PostsService {
   async requestJoin(postId: number, userId: number) {
     const { data: post, error: postError } = await this.supabase
       .from("posts")
-      .select("max_particip, user_id, title")
+      .select("max_particip, current_particip, user_id, title")
       .eq("id", postId)
       .single();
     if (postError || !post)
       throw new InternalServerErrorException("No se encontro el post");
 
+    if (Number(post.user_id) === Number(userId)) {
+      throw new BadRequestException("El organizador ya pertenece a su propio evento");
+    }
+
     const isUnlimited = post.max_particip === 0;
+    const isFull = !isUnlimited && Number(post.current_particip || 0) >= Number(post.max_particip || 0);
+
+    const { data: existingParticipation, error: existingError } = await this.supabase
+      .from("participations")
+      .select("*, users(username)")
+      .eq("post_id", postId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingError) throw new InternalServerErrorException(existingError.message);
+    if (existingParticipation) return existingParticipation;
+
+    if (isFull) {
+      throw new BadRequestException("El evento ya esta completo");
+    }
 
     const { data: participation, error: partError } = await this.supabase
       .from("participations")
@@ -188,6 +313,10 @@ export class PostsService {
 
     if (isUnlimited) {
       await this.supabase.rpc("increment_participant", { row_id: postId });
+      await this.supabase
+        .from("posts")
+        .update({ is_chat_active: true })
+        .eq("id", postId);
       await this.supabase.from("messages").insert([
         {
           post_id: postId,
@@ -296,16 +425,25 @@ export class PostsService {
     try {
       const { data: currentPart, error: currentError } = await this.supabase
         .from("participations")
-        .select("status, post_id, user_id, users(username), posts(user_id)")
+        .select("status, post_id, user_id, users(username), posts(user_id, max_particip, current_particip)")
         .eq("id", participationId)
         .single();
 
       if (currentError || !currentPart) throw new InternalServerErrorException("No se encontró la participación");
 
-      const ownerId = (currentPart.posts as any)?.user_id;
+      const postData = currentPart.posts as any;
+      const ownerId = postData?.user_id;
 
       if (status === "rejected" && currentPart.user_id === ownerId) {
         throw new BadRequestException("El organizador no puede ser expulsado de su propio evento");
+      }
+
+      const isAcceptingNewParticipant = status === "accepted" && currentPart.status !== "accepted";
+      const isUnlimited = Number(postData?.max_particip || 0) === 0;
+      const isFull = !isUnlimited && Number(postData?.current_particip || 0) >= Number(postData?.max_particip || 0);
+
+      if (isAcceptingNewParticipant && isFull) {
+        throw new BadRequestException("El evento ya esta completo");
       }
 
       const { data: updatedPart, error: updateError } = await this.supabase
@@ -322,8 +460,12 @@ export class PostsService {
 
       if (updatedPart) {
         // CASO A: ACEPTAR A ALGUIEN NUEVO
-        if (status === "accepted") {
+        if (isAcceptingNewParticipant) {
           await this.supabase.rpc("increment_participant", { row_id: updatedPart.post_id });
+          await this.supabase
+            .from("posts")
+            .update({ is_chat_active: true })
+            .eq("id", updatedPart.post_id);
 
           await this.supabase.from("messages").insert([{
             post_id: updatedPart.post_id,
@@ -331,6 +473,13 @@ export class PostsService {
             content: `SYS_USER_JOINED:${participantUsername}`,
             type: "system"
           }]);
+
+          await this.createNotification(
+            updatedPart.user_id,
+            updatedPart.posts.user_id,
+            updatedPart.post_id,
+            "accepted"
+          );
         }
 
         // CASO B: EXPULSAR / RECHAZAR A ALGUIEN QUE YA ESTABA DENTRO
@@ -349,6 +498,15 @@ export class PostsService {
             updatedPart.posts.user_id,
             updatedPart.post_id,
             'kicked'
+          );
+        }
+
+        if (currentPart.status !== "accepted" && status === "rejected") {
+          await this.createNotification(
+            updatedPart.user_id,
+            updatedPart.posts.user_id,
+            updatedPart.post_id,
+            "rejected"
           );
         }
 

@@ -2,6 +2,8 @@ import React from "react";
 import { Heart, MessageCircle, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../hooks/useAuth"; 
+import { getCategoryLabel } from "../../../services/categoryService";
+import type { EventCategory } from "../../../types/category";
 import "./PostCard.css";
 
 interface Post {
@@ -13,17 +15,22 @@ interface Post {
   comments?: number;
   max_particip?: number;
   current_particip?: number;
+  category?: string;
+  favorite_count?: number;
+  is_favorited?: boolean;
   userStatus?: "available" | "pending" | "accepted" | "rejected";
 }
 
 interface PostCardProps {
   post: Post;
+  category?: EventCategory;
   onClick: () => void;
+  onFavoriteToggle?: (postId: number | string, nextFavorite: boolean) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onClick }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, category, onClick, onFavoriteToggle }) => {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const placeholderImg = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&auto=format&fit=crop';
   const finalSrc = post.image_url || placeholderImg;
@@ -42,6 +49,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onClick }) => {
       case "rejected": return <XCircle size={14} />;
       default: return null;
     }
+  };
+
+  const handleFavoriteClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onFavoriteToggle?.(post.id, !post.is_favorited);
   };
 
   return (
@@ -69,12 +81,34 @@ const PostCard: React.FC<PostCardProps> = ({ post, onClick }) => {
         <div className="unlimited-badge-mini">{t('post_card.unlimited')}</div>
       )}
 
+      {category && (
+        <div
+          className="post-category-badge"
+          style={{ "--category-color": category.color } as React.CSSProperties}
+        >
+          <span />
+          {getCategoryLabel(category, i18n.language)}
+        </div>
+      )}
+
+      {onFavoriteToggle && (
+        <button
+          type="button"
+          className={`post-favorite-btn ${post.is_favorited ? "active" : ""}`}
+          onClick={handleFavoriteClick}
+          aria-label={post.is_favorited ? t("post_card.favorite_remove") : t("post_card.favorite_add")}
+        >
+          <Heart size={16} fill={post.is_favorited ? "currentColor" : "none"} />
+          <span>{post.favorite_count || 0}</span>
+        </button>
+      )}
+
       <div className="post-card-overlay">
         <div className="overlay-stats">
           <div className="stat-group">
             <div className="stat-item">
               <Heart size={14} fill="white" color="white" /> 
-              <span>{post.likes || 0}</span>
+              <span>{post.favorite_count ?? post.likes ?? 0}</span>
             </div>
             <div className="stat-item">
               <MessageCircle size={14} fill="white" color="white" /> 

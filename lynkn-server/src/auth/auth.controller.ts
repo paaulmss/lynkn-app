@@ -29,6 +29,11 @@ export class AuthController {
     return this.authService.validateGoogleUser(token);
   }
 
+  @Post('supabase-session')
+  async supabaseSessionLogin(@Body('accessToken') accessToken: string) {
+    return this.authService.exchangeSupabaseSession(accessToken);
+  }
+
   @Post('register')
   async register(@Body() userData: any) {
     try {

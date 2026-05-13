@@ -2,7 +2,7 @@
     CONTENEDOR DE LA PAGINA NOTIFICACION
    ========================================================================== */
 .notifications-page-content {
-  padding: 100px 40px 40px; 
+  padding: calc(var(--nav-height) + 24px) var(--page-gutter) 44px; 
   max-width: 900px;
   margin: 0 auto;
   min-height: 100vh;
@@ -17,7 +17,7 @@
 }
 
 .page-title {
-  font-size: 1.8rem;
+  font-size: clamp(1.45rem, 4vw, 2.2rem);
   font-weight: 900;
   letter-spacing: 2px;
   color: var(--text-main);
@@ -111,7 +111,7 @@
 
 @media (max-width: 768px) {
   .notifications-page-content {
-    padding: 100px 20px 40px;
+    padding: 88px 14px 28px;
   }
 
   .page-title {

@@ -18,6 +18,7 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   updatePreferences: (theme: string, lang: string) => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
   token: string | null;
   login: (data: { access_token: string; user: User }) => void;
   logout: () => void;

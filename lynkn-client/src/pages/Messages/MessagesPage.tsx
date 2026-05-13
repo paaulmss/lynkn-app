@@ -7,12 +7,11 @@ import { supabase } from "../../api/supabaseClient";
 
 import Sidebar from "../../components/Sidebar";
 import CreatePostModal from "../../components/posts/CreatePostModal";
-import { Menu, Search, Filter, Send, Lock, Loader2 } from "lucide-react";
+import { Menu, Send, Loader2 } from "lucide-react";
 
 interface EventParticipation {
   id: number;
   title: string;
-  isActive: boolean;
   max_particip: number;
 }
 
@@ -88,15 +87,12 @@ const MessagesPage = () => {
         .map((p) => ({
           id: p.posts!.id,
           title: p.posts!.title,
-          isActive:
-            p.posts!.max_particip === 0 ? true : p.posts!.is_chat_active,
           max_particip: p.posts!.max_particip,
         }));
 
       const formattedOwned = (ownedPosts || []).map((p) => ({
         id: p.id,
         title: p.title,
-        isActive: p.max_particip === 0 ? true : p.is_chat_active,
         max_particip: p.max_particip,
       }));
 
@@ -110,6 +106,67 @@ const MessagesPage = () => {
     };
 
     fetchMyEvents();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const reloadMyEvents = async () => {
+      const { data: participations, error: pError } = await supabase
+        .from("participations")
+        .select(
+          `post_id, posts ( id, title, is_chat_active, user_id, max_particip )`,
+        )
+        .eq("user_id", user.id)
+        .eq("status", "accepted");
+
+      const { data: ownedPosts, error: oError } = await supabase
+        .from("posts")
+        .select(`id, title, is_chat_active, user_id, max_particip`)
+        .eq("user_id", user.id);
+
+      if (pError || oError) return;
+
+      const formattedParticipations = (
+        (participations as unknown as SupabaseResponse[]) || []
+      )
+        .filter((p) => p.posts !== null)
+        .map((p) => ({
+          id: p.posts!.id,
+          title: p.posts!.title,
+          max_particip: p.posts!.max_particip,
+        }));
+
+      const formattedOwned = (ownedPosts || []).map((p) => ({
+        id: p.id,
+        title: p.title,
+        max_particip: p.max_particip,
+      }));
+
+      setMyEvents(Array.from(
+        new Map([...formattedParticipations, ...formattedOwned].map((item) => [item.id, item])).values(),
+      ));
+    };
+
+    const channel = supabase
+      .channel(`accepted_chat_updates_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "participations",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          reloadMyEvents();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -148,33 +205,10 @@ const MessagesPage = () => {
   }, [activePostId]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel("chat_unlock_updates")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "posts" },
-        (payload) => {
-          if (payload.new.is_chat_active || payload.new.max_particip === 0) {
-            setMyEvents((prev) =>
-              prev.map((ev) =>
-                ev.id === payload.new.id ? { ...ev, isActive: true } : ev,
-              ),
-            );
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  useEffect(() => {
-    const currentEvent = myEvents.find((e) => e.id === activePostId);
-    if (!activePostId || !currentEvent?.isActive) return;
+    if (!activePostId || !user?.id) return;
 
     chatService.connect();
-    chatService.joinPostChat(activePostId);
+    chatService.joinPostChat(activePostId, Number(user.id));
     chatService.onNewMessage((msg) => {
       if (msg.post_id === activePostId) {
         setMessages((prev) => [...prev, msg]);
@@ -184,10 +218,9 @@ const MessagesPage = () => {
       chatService.offNewMessage();
       chatService.disconnect();
     };
-  }, [activePostId, myEvents]);
+  }, [activePostId, user?.id]);
 
   const handleSelectEvent = (event: EventParticipation) => {
-    if (!event.isActive) return;
     setActivePostId(event.id);
   };
 
@@ -221,15 +254,7 @@ const MessagesPage = () => {
           >
             <Menu color={isDarkMode ? "white" : "black"} size={24} />
           </button>
-          <div className="search-bar">
-            <Search size={18} color="var(--text-muted)" />
-            <input type="text" placeholder={t("messages.search_placeholder")} />
-            <Filter
-              size={18}
-              color="var(--text-muted)"
-              className="filter-icon"
-            />
-          </div>
+          <div className="navbar-page-title">{t("nav.messages")}</div>
         </header>
 
         <div className="messages-page-wrapper">
@@ -249,27 +274,18 @@ const MessagesPage = () => {
                 myEvents.map((event) => (
                   <div
                     key={event.id}
-                    className={`event-item ${activePostId === event.id ? "active" : ""} ${!event.isActive ? "pending" : ""}`}
+                    className={`event-item ${activePostId === event.id ? "active" : ""}`}
                     onClick={() => handleSelectEvent(event)}
                   >
                     <div className="event-avatar">
-                      {event.isActive ? (
-                        event.title[0].toUpperCase()
-                      ) : (
-                        <Lock size={16} />
-                      )}
+                      {event.title[0].toUpperCase()}
                     </div>
                     <div className="event-info">
                       <span className="event-name">{event.title}</span>
                       <span className="event-status">
-                        {event.isActive
-                          ? t("messages.chat_group")
-                          : t("messages.pending_quota")}
+                        {t("messages.chat_group")}
                       </span>
                     </div>
-                    {!event.isActive && (
-                      <div className="status-badge">LOCK</div>
-                    )}
                   </div>
                 ))
               ) : (
@@ -280,8 +296,7 @@ const MessagesPage = () => {
 
           <section className="chat-area">
             {activePostId ? (
-              activeEvent?.isActive ? (
-                <>
+              <>
                   <header className="chat-header">
                     <div className="event-avatar small">
                       {activeEvent?.title[0].toUpperCase()}
@@ -348,21 +363,6 @@ const MessagesPage = () => {
                     </button>
                   </form>
                 </>
-              ) : (
-                <div className="no-chat-selected">
-                  <Lock
-                    size={64}
-                    className="lock-icon"
-                    style={{
-                      color: "var(--text-muted)",
-                      opacity: 0.3,
-                      marginBottom: "20px",
-                    }}
-                  />
-                  <h3>{t("messages.chat_locked_title")}</h3>
-                  <p>{t("messages.chat_locked_desc")}</p>
-                </div>
-              )
             ) : (
               <div className="no-chat-selected">
                 <div

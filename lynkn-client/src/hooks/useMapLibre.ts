@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { ApprovedUser } from '../types/user.ts';
@@ -9,6 +10,7 @@ interface UseMapLibreOptions {
 }
 
 export const useMapLibre = ({ enabled, apiUrl }: UseMapLibreOptions) => {
+  const { t } = useTranslation();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -25,10 +27,10 @@ export const useMapLibre = ({ enabled, apiUrl }: UseMapLibreOptions) => {
           <img src="${user.fotoPerfil}" class="w-full h-24 object-cover border-b border-zinc-800" />
           <div class="p-3">
             <strong class="block text-sm font-bold tracking-tight uppercase">${user.username}</strong>
-            <p class="text-[11px] text-zinc-400 leading-tight my-1">${user.bio || 'Miembro verificado'}</p>
+            <p class="text-[11px] text-zinc-400 leading-tight my-1">${user.bio || t("map.verified_member")}</p>
             <div class="flex items-center gap-1 mt-2">
                <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></span>
-               <span class="text-[10px] text-cyan-400 font-medium">CONECTADO</span>
+               <span class="text-[10px] text-cyan-400 font-medium">${t("map.connected")}</span>
             </div>
           </div>
         </div>
@@ -38,7 +40,7 @@ export const useMapLibre = ({ enabled, apiUrl }: UseMapLibreOptions) => {
       .setLngLat([user.lng, user.lat])
       .setPopup(popup)
       .addTo(mapInstance);
-  }, []);
+  }, [t]);
 
   const loadApprovedUsers = useCallback(async (mapInstance: maplibregl.Map) => {
     try {
@@ -50,8 +52,8 @@ export const useMapLibre = ({ enabled, apiUrl }: UseMapLibreOptions) => {
         users.forEach(u => u.lat && u.lng && createUserMarker(u, mapInstance));
       } else {
         const mockUsers: ApprovedUser[] = [
-          { id: 1, username: 'Adrián', fotoPerfil: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200', lat: 40.4225, lng: -3.7035, bio: 'Explorando Madrid 📍' },
-          { id: 2, username: 'Sofía', fotoPerfil: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200', lat: 40.4180, lng: -3.7140, bio: 'Diseño y café ☕' }
+          { id: 1, username: 'Adrián', fotoPerfil: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200', lat: 40.4225, lng: -3.7035, bio: t("map.mock_bio_explore") },
+          { id: 2, username: 'Sofía', fotoPerfil: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200', lat: 40.4180, lng: -3.7140, bio: t("map.mock_bio_design") }
         ];
         mockUsers.forEach(u => createUserMarker(u, mapInstance));
       }

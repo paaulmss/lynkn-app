@@ -32,7 +32,7 @@ export const compareFaces = async (image1: string, image2: string): Promise<bool
     const d2 = await faceapi.detectSingleFace(img2, options).withFaceLandmarks().withFaceDescriptor();
 
     if (!d1 || !d2) {
-      throw new Error("No se detectó un rostro claro en alguna de las imágenes.");
+      throw new Error("ERR_NO_FACE_DETECTED");
     }
 
     const distance = faceapi.euclideanDistance(d1.descriptor, d2.descriptor);

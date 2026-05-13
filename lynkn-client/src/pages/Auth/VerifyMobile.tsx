@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 interface ServerResponse {
   status: "ok" | "error";
@@ -60,7 +61,7 @@ const VerifyMobile: React.FC = () => {
               if (response?.status === "ok") {
                 setStatus("success");
               } else {
-                alert(response?.message || t("verify_mobile.err_sync"));
+                toast.error(t("verify_mobile.err_sync"));
                 setStatus("idle");
               }
             },

@@ -1,4 +1,6 @@
 import { io, Socket } from 'socket.io-client';
+import { toast } from 'sonner';
+import i18n from '../i18n';
 
 const SOCKET_URL = import.meta.env.PROD 
   ? 'https://lynkn-backend.onrender.com'
@@ -26,8 +28,8 @@ class ChatService {
       transports: ['polling', 'websocket']
     });
 
-    this.socket.on('error-message', (data: { msg: string }) => {
-      alert(data.msg);
+    this.socket.on('error-message', () => {
+      toast.error(i18n.t('messages.socket_error'));
     });
   }
 
@@ -36,8 +38,8 @@ class ChatService {
     this.socket = null;
   }
 
-  joinPostChat(postId: number) {
-    this.socket?.emit('join-chat', { postId });
+  joinPostChat(postId: number, userId: number) {
+    this.socket?.emit('join-chat', { postId, userId });
   }
 
   sendMessage(postId: number, senderId: number, content: string) {

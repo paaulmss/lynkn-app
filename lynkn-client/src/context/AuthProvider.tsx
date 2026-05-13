@@ -52,6 +52,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user, i18n]);
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser;
+
+      const updatedUser: User = {
+        ...currentUser,
+        ...updates,
+        foto_perfil: updates.foto_perfil || currentUser.foto_perfil || `https://api.dicebear.com/7.x/avataaars/svg?seed=${updates.username || currentUser.username}`,
+      };
+
+      localStorage.setItem('lynkn_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
+
   // --- EFECTO PARA APLICAR PREFERENCIAS AL CARGAR ---
   useEffect(() => {
     if (user) {
@@ -105,6 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login, 
         logout, 
         updatePreferences,
+        updateUser,
         isAuthenticated: !!token,
         isSidebarOpen,
         setIsSidebarOpen,

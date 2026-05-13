@@ -11,10 +11,9 @@
 }
 
 .settings-page-wrapper {
-  padding: 40px;
+  padding: calc(var(--nav-height) + 24px) var(--page-gutter) 44px;
   max-width: 900px;
   margin: 0 auto;
-  margin-top: 60px;
 }
 
 /* ==========================================================================
@@ -25,8 +24,8 @@
 }
 
 .settings-header h1 {
-  font-size: 1.5rem;
-  letter-spacing: 8px;
+  font-size: clamp(1.45rem, 4vw, 2.2rem);
+  letter-spacing: 0;
   font-weight: 900;
   margin-bottom: 8px;
   color: var(--text-main);
@@ -52,7 +51,7 @@
 .settings-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   padding: 24px;
   transition: all 0.3s ease;
   box-shadow: var(--card-shadow);
@@ -94,7 +93,7 @@ body.light-mode .settings-card {
   font-size: 0.8rem;
   margin-top: 5px;
   line-height: 1.4;
-  max-width: 80%;
+  max-width: 62ch;
 }
 
 .status-content {
@@ -298,7 +297,7 @@ body.light-mode .danger-zone-card {
   border: 1px solid var(--border);
   color: var(--text-main);
   padding: 20px;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -314,4 +313,41 @@ body.light-mode .danger-zone-card {
 .logout-full-btn:hover {
   background: var(--text-main);
   color: var(--bg-dark);
+}
+
+@media (max-width: 640px) {
+  .settings-page-wrapper {
+    padding: 88px 14px 28px;
+  }
+
+  .settings-header {
+    margin-bottom: 24px;
+  }
+
+  .settings-header p,
+  .item-info small {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .settings-card {
+    padding: 18px;
+  }
+
+  .settings-item,
+  .status-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .settings-select,
+  .settings-range,
+  .delete-acc-btn {
+    width: 100%;
+  }
+
+  .delete-acc-btn,
+  .verify-action-btn {
+    min-height: 44px;
+  }
 }

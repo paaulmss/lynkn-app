@@ -13,9 +13,13 @@ import {
   ShieldCheck,
   ShieldAlert,
   AlertCircle,
+  CalendarDays,
 } from "lucide-react";
+import { toast } from "sonner";
 import api from "../../api/axiosConfig";
 import { loadModels, compareFaces } from "../../services/faceRecognition";
+import PublicPreferenceControls from "../../components/PublicPreferenceControls";
+import AppLogo from "../../components/AppLogo";
 import "./Register.css";
 
 interface ApiError {
@@ -36,6 +40,8 @@ const Register = () => {
   >("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   const isDarkMode = localStorage.getItem("theme") !== "light";
 
@@ -90,6 +96,7 @@ const Register = () => {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const birthDateRef = useRef<HTMLInputElement>(null);
   const SERVER_URL = "https://lynkn-backend.onrender.com";
 
   useEffect(() => {
@@ -144,7 +151,7 @@ const Register = () => {
           const error = err as Error;
           setFaceMatchStatus("error");
           setErrorMsg(
-            error.message.includes("rostro claro")
+            error.message === "ERR_NO_FACE_DETECTED"
               ? t("register.errors.ai_no_face")
               : t("register.errors.ai_error"),
           );
@@ -189,6 +196,7 @@ const Register = () => {
     const m = today.getMonth() - birthDate.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
     if (age < 18) return setErrorMsg(t("register.errors.underage"));
+    if (!termsAccepted) return setErrorMsg(t("register.errors.terms_required"));
 
     setLoadingStep(true);
     try {
@@ -268,6 +276,7 @@ const Register = () => {
 
     if (!previews.foto_perfil)
       return setErrorMsg(t("register.errors.avatar_required"));
+    if (!termsAccepted) return setErrorMsg(t("register.errors.terms_required"));
 
     // Si NO se salta la verificación y no hay éxito, bloqueamos
     if (!skipVerification && faceMatchStatus !== "success") {
@@ -280,10 +289,11 @@ const Register = () => {
         ...formData,
         foto_perfil: previews.foto_perfil,
         selfie: skipVerification ? null : previews.selfie,
+        terms_accepted: termsAccepted,
       };
 
       await api.post("/auth/register", finalPayload);
-      alert(t("profile.verified") + "!");
+      toast.success(t("register.success"));
       window.location.href = "/login";
     } catch (error: unknown) {
       const err = error as ApiError;
@@ -304,10 +314,11 @@ const Register = () => {
 
   return (
     <div className={`nomad-reg-container ${!isDarkMode ? "light-mode" : ""}`}>
+      <PublicPreferenceControls className="public-pref-floating" />
       <div className="nomad-reg-bg"></div>
       <div className="nomad-reg-card">
         <header className="nomad-reg-header">
-          <h1 className="nomad-logo">LYNKN</h1>
+          <AppLogo className="auth-logo" />
           <div className="nomad-step-dots">
             <span className={`dot ${step === 1 ? "active" : ""}`}></span>
             <span className={`dot ${step === 2 ? "active" : ""}`}></span>
@@ -374,15 +385,52 @@ const Register = () => {
                 <label className="nomad-label">
                   {t("register.placeholders.birth")}
                 </label>
-                <input
-                  type="date"
-                  name="birth_day"
-                  max={maxDateString}
-                  value={formData.birth_day}
-                  onChange={handleInputChange}
-                  required
-                />
+                <div className="date-input-wrapper">
+                  <input
+                    ref={birthDateRef}
+                    type="date"
+                    name="birth_day"
+                    max={maxDateString}
+                    value={formData.birth_day}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="date-picker-btn"
+                    aria-label={t("register.placeholders.birth")}
+                    onClick={() => {
+                      const input = birthDateRef.current;
+                      if (!input) return;
+                      if (typeof input.showPicker === "function") {
+                        input.showPicker();
+                      } else {
+                        input.focus();
+                      }
+                    }}
+                  >
+                    <CalendarDays size={18} />
+                  </button>
+                </div>
               </div>
+
+              <label className="terms-check-row">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(event) => setTermsAccepted(event.target.checked)}
+                />
+                <span>
+                  {t("register.terms.accept_prefix")}{" "}
+                  <button
+                    type="button"
+                    className="terms-link-btn"
+                    onClick={() => setIsTermsOpen(true)}
+                  >
+                    {t("register.terms.link")}
+                  </button>
+                </span>
+              </label>
 
               {errorMsg && (
                 <div
@@ -599,6 +647,42 @@ const Register = () => {
           </Link>
         </div>
       </div>
+
+      {isTermsOpen && (
+        <div className="modal-overlay blur terms-modal-overlay" onClick={() => setIsTermsOpen(false)}>
+          <section className="terms-modal" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <h2>{t("register.terms.title")}</h2>
+              <button type="button" onClick={() => setIsTermsOpen(false)}>
+                {t("common.cancel")}
+              </button>
+            </header>
+            <div className="terms-modal-body">
+              <p>{t("register.terms.intro")}</p>
+              <h3>{t("register.terms.identity_title")}</h3>
+              <p>{t("register.terms.identity_text")}</p>
+              <h3>{t("register.terms.events_title")}</h3>
+              <p>{t("register.terms.events_text")}</p>
+              <h3>{t("register.terms.content_title")}</h3>
+              <p>{t("register.terms.content_text")}</p>
+              <h3>{t("register.terms.privacy_title")}</h3>
+              <p>{t("register.terms.privacy_text")}</p>
+            </div>
+            <footer>
+              <button
+                type="button"
+                className="nomad-btn-primary"
+                onClick={() => {
+                  setTermsAccepted(true);
+                  setIsTermsOpen(false);
+                }}
+              >
+                {t("register.terms.accept_action")}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

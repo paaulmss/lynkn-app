@@ -183,8 +183,8 @@ const Settings = () => {
                     <span>{t("settings.interface_lang")}</span>
                     <small>
                       {i18n.language.startsWith("es")
-                        ? "Español (España)"
-                        : "English (US)"}
+                        ? t("settings.languages.es")
+                        : t("settings.languages.en")}
                     </small>
                   </div>
                 </div>

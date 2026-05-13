@@ -39,6 +39,15 @@ function App() {
             }
           />
 
+          <Route
+            path="/profile/:profileId"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Explore/Mapa */}
           <Route
             path="/explore"

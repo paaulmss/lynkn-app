@@ -48,6 +48,10 @@ export const authService = {
    * 3. LOGIN CON GOOGLE
    */
   loginWithGoogle: async (googleToken: string) => {
+    if (!googleToken) {
+      throw new Error('ERR_GOOGLE_TOKEN_INVALID');
+    }
+
     const response = await api.post('/auth/google', { token: googleToken });
     
     if (response.data.access_token) {

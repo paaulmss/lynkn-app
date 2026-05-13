@@ -2,17 +2,29 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import { useTranslation } from "react-i18next";
-import { AlertCircle } from "lucide-react"; // Importamos el icono para el error
+import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../services/authService";
+import PublicPreferenceControls from "../../components/PublicPreferenceControls";
+import AppLogo from "../../components/AppLogo";
 import "./Login.css";
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 const GoogleCustomButton = () => {
   const { login } = useAuth();
   const { t } = useTranslation();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        toast.error(t("auth.errors.ERR_GOOGLE_TOKEN_INVALID"));
+        return;
+      }
+
+      setIsGoogleLoading(true);
       try {
         const data = await authService.loginWithGoogle(
           tokenResponse.access_token,
@@ -20,9 +32,12 @@ const GoogleCustomButton = () => {
         login(data);
       } catch (error) {
         console.error("Error enviando token a NestJS:", error);
+        toast.error(t("auth.errors.ERR_GOOGLE_TOKEN_INVALID"));
+      } finally {
+        setIsGoogleLoading(false);
       }
     },
-    onError: () => console.log("Error en el login de Google"),
+    onError: () => toast.error(t("auth.errors.ERR_GOOGLE_TOKEN_INVALID")),
   });
 
   return (
@@ -30,13 +45,14 @@ const GoogleCustomButton = () => {
       type="button"
       onClick={() => handleGoogleLogin()}
       className="btn-google-login"
+      disabled={isGoogleLoading}
     >
       <img
         src="https://rotulosmatesanz.com/wp-content/uploads/2017/09/2000px-Google_G_Logo.svg_.png"
         alt="Google"
         className="google-icon"
       />
-      {t('auth.login.btn_google')}
+      {isGoogleLoading ? t("auth.login.btn_verifying") : t('auth.login.btn_google')}
     </button>
   );
 };
@@ -81,25 +97,24 @@ const Login: React.FC = () => {
   };
 
   return (
-    <GoogleOAuthProvider clientId="TU_CLIENT_ID_REAL">
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || ""}>
       <div className="login-container">
+        <PublicPreferenceControls className="public-pref-floating" />
         <div className="login-bg-image"></div>
         <div className="login-overlay"></div>
 
         <div className="login-card">
-          <h1 className="login-logo">LYNKN</h1>
+          <AppLogo className="auth-logo" />
           <p className="login-subtitle">{t('auth.login.subtitle')}</p>
 
-          <form onSubmit={handleSubmit} className="login-form">
-            
-            {/* BLOQUE DE ERROR VISUAL */}
-            {errorMsg && (
-              <div className="nomad-ui-error animate-in" style={{ marginBottom: '1.5rem' }}>
-                <AlertCircle size={16} />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+          {errorMsg && (
+            <div className="nomad-ui-error animate-in" style={{ marginBottom: '1.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group-login">
               <input
                 type="text"
@@ -125,15 +140,21 @@ const Login: React.FC = () => {
             >
               {loading ? t('auth.login.btn_verifying') : t('auth.login.submit')}
             </button>
+          </form>
 
             <div className="login-separator">
               <span>{t('common.or') || 'O'}</span>
             </div>
 
             <div className="google-wrapper">
-              <GoogleCustomButton />
+              {GOOGLE_CLIENT_ID ? (
+                <GoogleCustomButton />
+              ) : (
+                <button type="button" className="btn-google-login" disabled>
+                  {t("auth.login.google_not_configured")}
+                </button>
+              )}
             </div>
-          </form>
 
           <div className="login-footer">
             <span>{t('auth.login.no_account')}</span>

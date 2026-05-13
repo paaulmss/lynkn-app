@@ -1,8 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import PublicPreferenceControls from '../../components/PublicPreferenceControls';
+import AppLogo from '../../components/AppLogo';
 import './Home.css';
 
 const Home: React.FC = () => {
+  const { t } = useTranslation();
   const heroRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -55,47 +59,50 @@ const Home: React.FC = () => {
         <div className="hero-bg-wrapper" ref={heroRef}></div>
         <div className="hero-overlay">
           <header className="hero-header">
-            <span className="logo-text">LYNKN</span>
-            <div className="auth-group">
-              <Link to="/login" className="btn-login">INICIA SESIÓN</Link>
-              <Link to="/register" className="btn-register">REGISTRATE</Link>
+            <AppLogo className="home-logo" />
+            <div className="home-actions">
+              <PublicPreferenceControls className="home-pref-controls" />
+              <div className="auth-group">
+                <Link to="/login" className="btn-login">{t("home.login")}</Link>
+                <Link to="/register" className="btn-register">{t("home.register")}</Link>
+              </div>
             </div>
           </header>
           
           <div className="hero-main-text reveal">
-            <h1>Un círculo curado <br /> de gente con futuro.</h1>
-            <h2>Cada jueves. Offline.</h2>
-            <p className="upgrade-text">Upgrade your Circle.</p>
+            <h1>{t("home.hero_title")}</h1>
+            <h2>{t("home.hero_subtitle")}</h2>
+            <p className="upgrade-text">{t("home.hero_tagline")}</p>
           </div>
           
           <div className="hero-footer">
-            <span>Seleccionamos los miembros a la mano.</span>
+            <span>{t("home.hero_footer")}</span>
           </div>
         </div>
       </section>
 
       <section className="manifesto-section themed">
         <div className="manifesto-content reveal">
-          <p>Creemos que los mejores <br /> momentos de la vida ocurren</p>
-          <h3 className="highlight">fuera de la pantalla.</h3>
+          <p>{t("home.manifesto_one_text")}</p>
+          <h3 className="highlight">{t("home.manifesto_one_highlight")}</h3>
         </div>
       </section>
 
       <section className="manifesto-section themed">
         <div className="manifesto-content reveal">
-          <p>Filtramos</p>
-          <h3 className="highlight">para que no <br /> pierdas el tiempo.</h3>
+          <p>{t("home.manifesto_two_text")}</p>
+          <h3 className="highlight">{t("home.manifesto_two_highlight")}</h3>
         </div>
       </section>
 
       <footer className="home-footer themed">
         <div className="footer-logo reveal">LYNKN</div>
         <div className="footer-links reveal">
-          <a href="#">LEGAL NOTICE</a>
-          <a href="#">TT</a>
-          <a href="#">PP</a>
+          <a href="#">{t("home.legal_notice")}</a>
+          <a href="#">{t("home.terms")}</a>
+          <a href="#">{t("home.privacy")}</a>
         </div>
-        <p className="reveal">© 2026 LYNKN TECH, S.L.</p>
+        <p className="reveal">{t("home.copyright")}</p>
       </footer>
     </div>
   );

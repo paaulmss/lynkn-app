@@ -1,7 +1,7 @@
 /* --- Contenedor y Base --- */
 .home-container {
-  background-color: #000;
-  color: #fff;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
   width: 100%;
   height: 100vh;
   overflow-y: scroll;
@@ -35,7 +35,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('https://posh-images-alts-production.s3.amazonaws.com/68362300980a2af34223395f/2099x1400.webp');
+  background-image: url('https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=85&w=2200&auto=format&fit=crop');
   background-size: cover;
   background-position: center;
   z-index: 1;
@@ -46,7 +46,7 @@
 .hero-overlay {
   height: 100%;
   width: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.34) 55%, rgba(0, 0, 0, 0.62));
   display: flex;
   flex-direction: column;
   padding: 30px 50px; 
@@ -67,17 +67,21 @@
   box-sizing: border-box;
 }
 
+.home-actions {
+  display: flex !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
 .auth-group {
   display: flex !important;
   gap: 12px !important;
-  align-items: baseline !important;
+  align-items: center !important;
 }
 
-.logo-text {
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  line-height: 1; 
+.home-logo {
+  width: clamp(150px, 13vw, 190px);
+  height: 56px;
 }
 
 .btn-login, .btn-register {
@@ -115,11 +119,12 @@
 .hero-main-text {
   margin-top: auto; 
   margin-bottom: auto;
+  max-width: min(980px, 92vw);
 }
 
 .hero-main-text h1 {
-  font-size: clamp(2.5rem, 9vw, 6.5rem); 
-  line-height: 0.85;
+  font-size: clamp(2.8rem, 8vw, 7rem); 
+  line-height: 0.9;
   font-weight: 900;
   margin-bottom: 20px;
   letter-spacing: -0.04em;
@@ -127,9 +132,12 @@
 }
 
 .hero-main-text h2 {
-  font-size: clamp(1.2rem, 3vw, 2.8rem);
-  font-weight: 500;
-  opacity: 0.9;
+  max-width: 780px;
+  font-size: clamp(1.05rem, 2.4vw, 2rem);
+  font-weight: 650;
+  line-height: 1.15;
+  opacity: 0.94;
+  text-transform: none;
 }
 
 .upgrade-text {
@@ -154,13 +162,16 @@
   justify-content: center;
   text-align: center;
   padding: 10vw;
-  background-color: #000;
+  background:
+    linear-gradient(135deg, rgba(34, 211, 238, 0.08), transparent 40%),
+    linear-gradient(315deg, rgba(249, 115, 22, 0.08), transparent 36%),
+    var(--bg-dark);
   z-index: 3;
 }
 
 .manifesto-content p {
   font-size: clamp(1.2rem, 3vw, 2.5rem);
-  color: #fff;
+  color: var(--text-main);
   margin-bottom: 1rem;
   font-weight: 400;
   opacity: 0.9;
@@ -195,8 +206,8 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: #000;
-  border-top: 1px solid #1a1a1a;
+  background-color: var(--bg-dark);
+  border-top: 1px solid var(--border);
   z-index: 3;
 }
 
@@ -214,7 +225,7 @@
 }
 
 .footer-links a {
-  color: #fff;
+  color: var(--text-main);
   font-size: 0.8rem;
   text-decoration: none;
   opacity: 0.6;
@@ -226,21 +237,99 @@
 }
 
 @media (max-width: 768px) {
+  .home-container {
+    scroll-snap-type: none;
+  }
+
+  .hero-section,
+  .manifesto-section,
+  .home-footer {
+    min-height: 100svh;
+    height: auto;
+  }
+
+  .hero-overlay {
+    padding: 96px 20px 28px;
+  }
+
   .hero-header {
     padding: 20px;
+    align-items: flex-start;
+    gap: 18px;
   }
   
   .auth-group {
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 8px;
   }
 
+  .home-actions {
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .home-pref-controls {
+    order: -1;
+  }
+
   .btn-login, .btn-register {
-    width: 140px !important;
+    width: auto !important;
+    min-width: 118px;
     height: 40px !important;
     font-size: 11px !important;
+    padding: 0 12px;
   }
 
   .hero-main-text h1 {
-    font-size: 3.5rem;
+    font-size: clamp(3rem, 17vw, 4.8rem);
+    overflow-wrap: anywhere;
+  }
+
+  .hero-footer {
+    max-width: 280px;
+  }
+}
+
+body.light-mode .hero-overlay {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12) 55%, rgba(255, 255, 255, 0.28));
+}
+
+body.light-mode .hero-main-text,
+body.light-mode .hero-footer {
+  color: #ffffff;
+}
+
+body.light-mode .manifesto-section {
+  background:
+    linear-gradient(135deg, rgba(8, 145, 178, 0.08), transparent 40%),
+    linear-gradient(315deg, rgba(249, 115, 22, 0.08), transparent 36%),
+    var(--bg-dark);
+}
+
+@media (max-width: 420px) {
+  .hero-header {
+    align-items: center;
+  }
+
+  .home-logo {
+    width: 128px;
+    height: 40px;
+  }
+
+  .home-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .auth-group {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .btn-login,
+  .btn-register {
+    flex: 1;
   }
 }

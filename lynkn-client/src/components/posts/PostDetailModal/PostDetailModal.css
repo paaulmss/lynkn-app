@@ -26,9 +26,9 @@ body.light-mode .nomad-overlay {
   background: var(--bg-dark);
   width: 95%;
   max-width: 1050px;
-  height: 85vh;
+  height: min(85vh, 840px);
   display: flex;
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
   position: relative;
@@ -102,14 +102,80 @@ body.light-mode .nomad-overlay {
   color: var(--text-main);
 }
 
+.nomad-creator-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nomad-follow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.nomad-follow-btn.active {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #22c55e;
+}
+
+.nomad-follow-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .nomad-title {
-  font-size: 2.2rem;
+  font-size: clamp(1.65rem, 4vw, 2.2rem);
   font-weight: 900;
   line-height: 1.1;
-  margin-bottom: 28px;
+  margin: 0;
   color: var(--text-main);
   text-transform: uppercase;
   letter-spacing: -1px;
+}
+
+.nomad-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.nomad-category-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--category-color) 15%, transparent);
+  border: 1px solid var(--category-color);
+  color: var(--text-main);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nomad-category-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--category-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--category-color) 70%, transparent);
 }
 
 .nomad-description {
@@ -121,7 +187,8 @@ body.light-mode .nomad-overlay {
 
 .nomad-stats-grid {
   display: flex;
-  gap: 48px;
+  gap: clamp(18px, 4vw, 48px);
+  flex-wrap: wrap;
   margin-bottom: 32px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 24px;
@@ -130,6 +197,25 @@ body.light-mode .nomad-overlay {
 .nomad-stat-box {
   display: flex;
   flex-direction: column;
+}
+
+button.nomad-stat-box {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.favorite-stat .nomad-stat-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.favorite-stat.active .nomad-stat-value {
+  color: #fb7185;
 }
 
 .nomad-stat-value {
@@ -206,7 +292,7 @@ body.light-mode .nomad-overlay {
 }
 
 .nomad-btn-join:not(:disabled):hover {
-  background: #00f2ff;
+  background: var(--accent-social);
   transform: translateY(-4px);
   box-shadow: 0 15px 40px rgba(0, 242, 255, 0.2);
 }
@@ -439,8 +525,53 @@ body.light-mode .nomad-footer {
 }
 
 @media (max-width: 768px) {
+  .nomad-overlay {
+    align-items: flex-end;
+    padding: 8px;
+  }
+
+  .nomad-modal {
+    width: 100%;
+    height: 94svh;
+    flex-direction: column;
+    border-radius: 18px 18px 10px 10px;
+  }
+
+  .nomad-image-section {
+    flex: 0 0 34%;
+    min-height: 210px;
+  }
+
   .nomad-info-section {
     border-left: none;
     border-top: 1px solid var(--border);
+    min-height: 0;
+  }
+
+  .nomad-scroll-area {
+    padding: 24px 18px;
+  }
+
+  .nomad-footer {
+    padding: 16px 18px max(16px, env(safe-area-inset-bottom));
+  }
+
+  .title-stats-row {
+    flex-direction: column;
+  }
+
+  .circular-progress-container {
+    width: 68px;
+    height: 68px;
+  }
+
+  .admin-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .action-group {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

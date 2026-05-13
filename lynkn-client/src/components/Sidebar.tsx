@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import AppLogo from './AppLogo';
 import './Sidebar.css';
 
 interface SidebarProps {
@@ -50,7 +51,7 @@ const Sidebar = ({ isOpen, onClose, activePage, onNewPostClick }: SidebarProps) 
       <aside className={`sidebar-component ${isOpen ? 'open' : 'closed'} ${!isDarkMode ? 'light-mode' : ''}`}>
         <div className="sidebar-header">
           <div className="logo-section">
-            <h2 className="logo-text">LYNKN</h2>
+            <AppLogo className="sidebar-logo" />
           </div>
           <button className="close-sidebar-btn" onClick={onClose}>
             <X size={24} color="var(--text-main)" />

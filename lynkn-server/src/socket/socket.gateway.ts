@@ -10,13 +10,13 @@ import { Server, Socket } from 'socket.io';
 import { SupabaseService } from '../supabase.service';
 
 interface SelfieData { sessionId: string; imageBase64: string; }
-interface ChatJoinData { postId: number; }
+interface ChatJoinData { postId: number; userId: number; }
 interface MessageData { postId: number; senderId: number; content: string; }
 
 @WebSocketGateway({
   cors: {
-    origin: ["https://lynkn-app.vercel.app", "http://localhost:5173"], 
-    credentials: true
+    origin: ['https://lynkn-app.vercel.app', 'http://localhost:5173'],
+    credentials: true,
   },
   transports: ['polling', 'websocket'],
 })
@@ -30,24 +30,46 @@ export class SocketGateway implements OnGatewayConnection {
     console.log('Usuario conectado:', client.id);
   }
 
-  // --- LOGICA DE CHAT GRUPAL CON PROTECCION ---
+  private async canAccessPostChat(postId: number, userId: number) {
+    if (!postId || !userId) return false;
+
+    const client = this.supabaseService.getClient();
+
+    const { data: post, error: postError } = await client
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (postError || !post) return false;
+    if (Number(post.user_id) === Number(userId)) return true;
+
+    const { data: participation, error: participationError } = await client
+      .from('participations')
+      .select('id')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .eq('status', 'accepted')
+      .maybeSingle();
+
+    if (participationError) {
+      console.error('Error verificando acceso al chat:', participationError.message);
+      return false;
+    }
+
+    return Boolean(participation);
+  }
 
   @SubscribeMessage('join-chat')
   async handleJoinChat(
-    @ConnectedSocket() client: Socket, 
-    @MessageBody() data: ChatJoinData
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: ChatJoinData,
   ) {
-    // VALIDACION: Verificar si el chat esta activo en la DB
-    const { data: post } = await this.supabaseService
-      .getClient()
-      .from('posts')
-      .select('is_chat_active')
-      .eq('id', data.postId)
-      .single();
+    const canAccess = await this.canAccessPostChat(data.postId, data.userId);
 
-    if (!post || !post.is_chat_active) {
-      console.log(`Intento de unión denegado. Chat inactivo: ${data.postId}`);
-      client.emit('error-message', { msg: 'El chat aún no está disponible.' });
+    if (!canAccess) {
+      console.log(`Intento de union denegado. Chat sin acceso: post ${data.postId}, user ${data.userId}`);
+      client.emit('error-message', { msg: 'No tienes acceso a este chat.' });
       return;
     }
 
@@ -57,18 +79,15 @@ export class SocketGateway implements OnGatewayConnection {
   }
 
   @SubscribeMessage('send-message')
-  async handleMessage(@ConnectedSocket() client: Socket, @MessageBody() data: MessageData) {
-    // VALIDACION: Doble chequeo antes de guardar el mensaje
-    const { data: post } = await this.supabaseService
-      .getClient()
-      .from('posts')
-      .select('is_chat_active')
-      .eq('id', data.postId)
-      .single();
+  async handleMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: MessageData,
+  ) {
+    const canAccess = await this.canAccessPostChat(data.postId, data.senderId);
 
-    if (!post || !post.is_chat_active) {
-      client.emit('error-message', { msg: 'No puedes enviar mensajes a un chat inactivo.' });
-      return { status: 'error', reason: 'chat_inactive' };
+    if (!canAccess) {
+      client.emit('error-message', { msg: 'No tienes acceso a este chat.' });
+      return { status: 'error', reason: 'chat_forbidden' };
     }
 
     const room = `post_${data.postId}`;
@@ -77,9 +96,9 @@ export class SocketGateway implements OnGatewayConnection {
       .getClient()
       .from('messages')
       .insert([{
-          post_id: data.postId,
-          sender_id: data.senderId,
-          content: data.content,
+        post_id: data.postId,
+        sender_id: data.senderId,
+        content: data.content,
       }])
       .select('*, users(username, foto_perfil)')
       .single();
@@ -93,7 +112,6 @@ export class SocketGateway implements OnGatewayConnection {
     return { status: 'ok' };
   }
 
-  // --- LOGICA DE BIOMETRIA ---
   @SubscribeMessage('join-session')
   handleJoinSession(@ConnectedSocket() client: Socket, @MessageBody() sessionId: string) {
     client.join(sessionId);

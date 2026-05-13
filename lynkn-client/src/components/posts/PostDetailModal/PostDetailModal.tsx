@@ -12,6 +12,9 @@ import {
   CheckCircle,
   AlertTriangle,
   Trash2,
+  Heart,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -19,6 +22,8 @@ import "./PostDetailModal.css";
 import "../ConfirmDeleteModal.css";
 import { useAuth } from "../../../hooks/useAuth";
 import api from "../../../api/axiosConfig";
+import { getCategoryLabel } from "../../../services/categoryService";
+import type { EventCategory } from "../../../types/category";
 import ParticipantsPanel, { type Participant } from "./ParticipantsPanel";
 
 interface PostData {
@@ -32,6 +37,8 @@ interface PostData {
   lng: number;
   max_particip: number;
   current_particip?: number;
+  favorite_count?: number;
+  is_favorited?: boolean;
   event_date: string;
   users?: {
     username: string;
@@ -42,6 +49,8 @@ interface PostData {
 
 interface PostDetailModalProps {
   post: PostData;
+  category?: EventCategory;
+  onFavoriteChange?: (social: { favorite_count: number; is_favorited: boolean }) => void;
   onClose: () => void;
 }
 
@@ -81,7 +90,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   );
 };
 
-const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
+const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, category, onFavoriteChange, onClose }) => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -89,6 +98,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(post.favorite_count || 0);
+  const [isFavorited, setIsFavorited] = useState(Boolean(post.is_favorited));
+  const [followStats, setFollowStats] = useState({ followers: 0, following: 0, is_following: false });
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const [currentParticipLocal, setCurrentParticipLocal] = useState<number>(
@@ -132,6 +145,40 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
   }, [post.id, post.user_id]);
 
   useEffect(() => {
+    setFavoriteCount(post.favorite_count || 0);
+    setIsFavorited(Boolean(post.is_favorited));
+  }, [post.favorite_count, post.is_favorited]);
+
+  useEffect(() => {
+    if (!user?.id || isOwner) return;
+
+    const syncParticipationStatus = async () => {
+      try {
+        const response = await api.get(`/posts/user-requests/${user.id}`);
+        const currentRequest = response.data.find(
+          (item: { post_id?: number; posts?: { id?: number }; status: "pending" | "accepted" | "rejected" }) =>
+            Number(item.post_id || item.posts?.id) === Number(post.id),
+        );
+
+        if (currentRequest?.status) {
+          setJoinStatus(currentRequest.status);
+        }
+      } catch (error) {
+        console.error("Error sincronizando estado de participación:", error);
+      }
+    };
+
+    syncParticipationStatus();
+  }, [isOwner, post.id, user?.id]);
+
+  useEffect(() => {
+    if (!post.user_id || isOwner) return;
+    api.get(`/users/${post.user_id}/social`, { params: { viewerId: user?.id } })
+      .then((response) => setFollowStats(response.data))
+      .catch((error) => console.error("Error loading follow status:", error));
+  }, [isOwner, post.user_id, user?.id]);
+
+  useEffect(() => {
     if (!mapContainer.current || !post.lat || !post.lng) return;
     const isDarkMode = localStorage.getItem("theme") !== "light";
     const styleName = isDarkMode ? "alidade_smooth_dark" : "alidade_smooth";
@@ -173,14 +220,54 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
         ownerId: post.user_id,
       });
       if (response.status === 201 || response.status === 200) {
-        setJoinStatus(isUnlimited ? "accepted" : "pending");
-        if (isUnlimited) setCurrentParticipLocal(prev => prev + 1);
-        toast.success("Solicitud enviada");
+        const nextStatus = response.data?.status || (isUnlimited ? "accepted" : "pending");
+        setJoinStatus(nextStatus);
+        if (nextStatus === "accepted" && joinStatus !== "accepted") {
+          setCurrentParticipLocal(prev => prev + 1);
+        }
+        toast.success(t("post_detail.toasts.request_sent"));
       }
     } catch {
-      toast.error("No se pudo enviar la solicitud");
+      toast.error(t("post_detail.toasts.request_error"));
     } finally {
       setLoadingJoin(false);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (!user?.id) return;
+    const nextFavorite = !isFavorited;
+    const previous = { favorite_count: favoriteCount, is_favorited: isFavorited };
+
+    setIsFavorited(nextFavorite);
+    setFavoriteCount((count) => Math.max(0, count + (nextFavorite ? 1 : -1)));
+
+    try {
+      const response = nextFavorite
+        ? await api.post(`/posts/${post.id}/favorite`, { userId: user.id })
+        : await api.delete(`/posts/${post.id}/favorite`, { params: { userId: user.id } });
+      setIsFavorited(response.data.is_favorited);
+      setFavoriteCount(response.data.favorite_count);
+      onFavoriteChange?.(response.data);
+    } catch (error) {
+      console.error("Error updating favorite:", error);
+      setIsFavorited(previous.is_favorited);
+      setFavoriteCount(previous.favorite_count);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!user?.id || isOwner) return;
+    setIsFollowLoading(true);
+    try {
+      const response = followStats.is_following
+        ? await api.delete(`/users/${post.user_id}/follow`, { params: { followerId: user.id } })
+        : await api.post(`/users/${post.user_id}/follow`, { followerId: user.id });
+      setFollowStats(response.data);
+    } catch (error) {
+      console.error("Error updating follow:", error);
+    } finally {
+      setIsFollowLoading(false);
     }
   };
 
@@ -188,11 +275,11 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
     setIsDeleting(true);
     try {
       await api.delete(`/posts/${post.id}?userId=${user?.id}`);
-      toast.success("Evento eliminado");
+      toast.success(t("post_detail.toasts.deleted"));
       onClose();
       window.location.reload();
     } catch {
-      toast.error("Error al eliminar el post");
+      toast.error(t("post_detail.toasts.delete_error"));
     } finally {
       setIsDeleting(false);
       setIsDeleteModalOpen(false);
@@ -214,9 +301,9 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
       } else if (status === 'rejected' && wasAccepted) {
         setCurrentParticipLocal(prev => Math.max(0, prev - 1));
       }
-      toast.success("Estado actualizado");
+      toast.success(t("post_detail.toasts.status_updated"));
     } catch {
-      toast.error("Error al procesar la acción");
+      toast.error(t("post_detail.toasts.action_error"));
     }
   };
 
@@ -244,12 +331,34 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
                 alt="Avatar"
               />
               <div className="nomad-creator-text">
-                <span className="nomad-username">@{post.users?.username || "usuario"}</span>
+                <span className="nomad-username">@{post.users?.username || t("post_detail.unknown_user")}</span>
+                {!isOwner && (
+                  <button
+                    type="button"
+                    className={`nomad-follow-btn ${followStats.is_following ? "active" : ""}`}
+                    onClick={handleFollowToggle}
+                    disabled={isFollowLoading}
+                  >
+                    {followStats.is_following ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                    {followStats.is_following ? t("profile.unfollow") : t("profile.follow")}
+                  </button>
+                )}
               </div>
             </div>
 
             <div className="title-stats-row">
-              <h1 className="nomad-title">{post.title}</h1>
+              <div className="nomad-title-block">
+                {category && (
+                  <span
+                    className="nomad-category-chip"
+                    style={{ "--category-color": category.color } as React.CSSProperties}
+                  >
+                    <i />
+                    {getCategoryLabel(category, i18n.language)}
+                  </span>
+                )}
+                <h1 className="nomad-title">{post.title}</h1>
+              </div>
               {!isUnlimited && (
                 <div className="circular-progress-container">
                   <svg width="80" height="80" viewBox="0 0 80 80">
@@ -270,6 +379,15 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
             </div>
 
             <div className="nomad-stats-grid">
+              <button
+                type="button"
+                className={`nomad-stat-box favorite-stat ${isFavorited ? "active" : ""}`}
+                onClick={handleFavoriteToggle}
+                disabled={!user?.id}
+              >
+                <span className="nomad-stat-value"><Heart size={20} fill={isFavorited ? "currentColor" : "none"} /> {favoriteCount}</span>
+                <span className="nomad-stat-label">{t("post_detail.favorites")}</span>
+              </button>
               <div className="nomad-stat-box">
                 <span className="nomad-stat-value">{isUnlimited ? "∞" : max}</span>
                 <span className="nomad-stat-label">{t('post_detail.total_spots')}</span>
@@ -346,7 +464,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose }) => {
                     {loadingJoin ? t('post_detail.status.joining') : <>{t('post_detail.status.join')} <ChevronRight size={18} /></>}
                   </button>
                 ) : (
-                  <button className={`nomad-btn-status-redirect ${joinStatus}`} onClick={() => { onClose(); navigate("/requests"); }}>
+                  <button className={`nomad-btn-status-redirect ${joinStatus}`} onClick={() => { onClose(); navigate(joinStatus === "accepted" ? "/messages" : "/requests"); }}>
                     <div className="status-label-content">
                       {joinStatus === "pending" && <Clock size={18} />}
                       {joinStatus === "accepted" && <CheckCircle size={18} />}

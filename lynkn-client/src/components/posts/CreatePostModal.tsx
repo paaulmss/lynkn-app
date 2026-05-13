@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../api/axiosConfig";
+import { categoryService, getCategoryLabel } from "../../services/categoryService";
+import type { EventCategory } from "../../types/category";
 import "./CreatePostModal.css";
 
 interface ApiError {
@@ -30,13 +32,14 @@ interface CreatePostProps {
 
 const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
-  // Lógica de bloqueo de seguridad
   const isLocked = user?.role !== "admin" && user?.status_verif !== "approved";
 
   const [caption, setCaption] = useState("");
   const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("general");
+  const [categories, setCategories] = useState<EventCategory[]>([]);
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -64,21 +67,39 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   const isDarkMode = localStorage.getItem("theme") !== "light";
 
   useEffect(() => {
+    let isMounted = true;
+    categoryService.getCategories().then((data) => {
+      if (isMounted) {
+        setCategories(data);
+        if (!data.some((item) => item.slug === category)) {
+          setCategory(data[0]?.slug || "general");
+        }
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  // EFECTO 1: Geolocalización inicial y limpieza de memoria de imagen
+  useEffect(() => {
     if ("geolocation" in navigator) {
       setIsLocating(true);
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setLocation(coords);
           setIsLocating(false);
         },
-        () => setIsLocating(false),
+        () => setIsLocating(false)
       );
     }
+
     return () => {
       if (preview) URL.revokeObjectURL(preview);
     };
+    // Añadimos preview para evitar el error de linting de limpieza
   }, [preview]);
 
+  // EFECTO 2: Inicialización del Mapa (Se separa de la actualización de coordenadas)
   useEffect(() => {
     if (showMiniMap && miniMapContainer.current && !miniMap.current) {
       const styleName = isDarkMode ? "alidade_smooth_dark" : "alidade_smooth";
@@ -87,11 +108,11 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         container: miniMapContainer.current,
         style: `https://tiles.stadiamaps.com/styles/${styleName}.json?api_key=${import.meta.env.VITE_STADIA_API_KEY}`,
         center: [location.lng, location.lat],
-        zoom: 14,
+        zoom: 15,
         attributionControl: false,
       });
 
-      miniMarker.current = new maplibregl.Marker({ color: "#22c55e" })
+      miniMarker.current = new maplibregl.Marker({ color: "#00f2ff" })
         .setLngLat([location.lng, location.lat])
         .addTo(miniMap.current);
 
@@ -100,38 +121,67 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         setLocation({ lat, lng });
         miniMarker.current?.setLngLat([lng, lat]);
       });
-
-      setTimeout(() => miniMap.current?.resize(), 100);
     }
 
     return () => {
-      if (!showMiniMap && miniMap.current) {
+      if (miniMap.current) {
         miniMap.current.remove();
         miniMap.current = null;
       }
     };
-  }, [showMiniMap, isDarkMode, location.lat, location.lng]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMiniMap, isDarkMode]);
 
-  const handleSearchLocation = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!searchQuery) return;
+  // EFECTO 3: Sincronizar marcador si la ubicación cambia por búsqueda externa
+  useEffect(() => {
+    if (miniMap.current && miniMarker.current) {
+      miniMarker.current.setLngLat([location.lng, location.lat]);
+    }
+  }, [location.lng, location.lat]);
+
+  const searchLocation = useCallback(async (query: string, showError = false) => {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) return;
+
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`,
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(normalizedQuery)}`
       );
-      const data = await response.json();
+      const data: Array<{ lat: string; lon: string }> = await response.json();
       if (data && data.length > 0) {
         const coords = {
           lat: parseFloat(data[0].lat),
           lng: parseFloat(data[0].lon),
         };
         setLocation(coords);
-        miniMap.current?.flyTo({ center: [coords.lng, coords.lat], zoom: 15 });
-        miniMarker.current?.setLngLat([coords.lng, coords.lat]);
+        setShowMiniMap(true);
+
+        if (miniMap.current) {
+          miniMap.current.flyTo({ center: [coords.lng, coords.lat], zoom: 16 });
+        }
+      } else if (showError) {
+        toast.error(t("create_post.err_location_not_found"));
       }
     } catch (err) {
       console.error("Error buscando ubicación:", err);
+      if (showError) toast.error(t("create_post.err_location_not_found"));
     }
+  }, [t]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 3 || isLocked) return;
+
+    const timer = window.setTimeout(() => {
+      searchLocation(query, false);
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [isLocked, searchLocation, searchQuery]);
+
+  const handleSearchLocation = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await searchLocation(searchQuery, true);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,7 +232,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       formData.append("user_id", String(user?.id));
       formData.append("lat", String(location.lat));
       formData.append("lng", String(location.lng));
-      formData.append("category", "general");
+      formData.append("category", category);
       formData.append("image", image);
       const finalParticipants = isUnlimited ? 0 : maxParticipants;
       formData.append("max_participants", String(finalParticipants));
@@ -199,26 +249,29 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       }, 2200);
     } catch (error) {
       const err = error as ApiError;
-      const rawMessage = err.response?.data?.message || "Error";
+      const rawMessage = err.response?.data?.message || t("common.error");
+      const getCreatePostErrorDescription = (message: string) => {
+        const normalized = message.toLowerCase();
+        if (normalized.includes("imagen es obligatoria")) return t("create_post.errors.image_required");
+        if (normalized.includes("contenido inapropiado")) return t("create_post.errors.inappropriate");
+        if (normalized.includes("fallo al procesar")) return t("create_post.errors.processing");
+        if (normalized.includes("fallo en la carga")) return t("create_post.errors.upload");
+        if (message.includes("|")) return message.split("|")[1].trim();
+        return message;
+      };
 
-      const newErrors: { title?: boolean; caption?: boolean; image?: boolean } =
-        {};
+      const newErrors: { title?: boolean; caption?: boolean; image?: boolean } = {};
       const lowerMsg = rawMessage.toLowerCase();
 
-      if (lowerMsg.includes("título") || lowerMsg.includes("title"))
-        newErrors.title = true;
-      if (lowerMsg.includes("descripción") || lowerMsg.includes("description"))
-        newErrors.caption = true;
-      if (lowerMsg.includes("imagen") || lowerMsg.includes("image"))
-        newErrors.image = true;
+      if (lowerMsg.includes("título") || lowerMsg.includes("title")) newErrors.title = true;
+      if (lowerMsg.includes("descripción") || lowerMsg.includes("description")) newErrors.caption = true;
+      if (lowerMsg.includes("imagen") || lowerMsg.includes("image")) newErrors.image = true;
 
       setErrors(newErrors);
 
       toast.error(t("create_post.err_security"), {
         id: TOAST_ID,
-        description: rawMessage.includes("|")
-          ? rawMessage.split("|")[1].trim()
-          : rawMessage,
+        description: getCreatePostErrorDescription(rawMessage),
       });
     } finally {
       setIsAnalyzing(false);
@@ -245,11 +298,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         {isLocked && (
           <div className="modal-security-overlay">
             <div className="lock-content">
-              <ShieldAlert
-                size={48}
-                color="var(--text-main)"
-                className="lock-icon-neon"
-              />
+              <ShieldAlert size={48} color="var(--text-main)" className="lock-icon-neon" />
               <h2>{t("create_post.restricted")}</h2>
               <p>{t("create_post.restricted_desc")}</p>
               <button
@@ -270,6 +319,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="create-post-form">
+          {/* Imagen */}
           <div
             className={`upload-section ${errors.image ? "input-error" : ""}`}
             onClick={() => !isLocked && fileInputRef.current?.click()}
@@ -290,58 +340,59 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                 <p>{t("create_post.add_photo")}</p>
               </div>
             )}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              hidden
-              disabled={isLocked}
-            />
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" hidden disabled={isLocked} />
           </div>
 
+          {/* Ubicación (Corregido según imagen) */}
           <div className="location-picker-container">
-            <label>{t("create_post.loc_label")}</label>
-            <div className="location-search-field">
-              <Search
-                size={16}
-                className="search-icon"
-                color="var(--text-muted)"
-              />
-              <input
-                type="text"
-                placeholder={t("create_post.search_place")}
-                value={searchQuery}
-                disabled={isLocked}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()}
-              />
+            <label className="nomad-label">{t("create_post.loc_label")}</label>
+
+            <div className="location-search-field-wrapper">
+              <div className="location-input-group">
+                <Search size={16} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder={t("create_post.search_place")}
+                  value={searchQuery}
+                  disabled={isLocked}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSearchLocation();
+                    }
+                  }}
+                />
+              </div>
               <button
                 type="button"
                 disabled={isLocked}
                 className={`map-toggle-btn ${showMiniMap ? "active" : ""}`}
                 onClick={() => setShowMiniMap(!showMiniMap)}
               >
-                <MapIcon size={16} />
+                <MapIcon size={18} />
               </button>
             </div>
+
             {showMiniMap && (
-              <div className="mini-map-wrapper">
+              <div className="mini-map-area animate-in">
                 <div ref={miniMapContainer} className="mini-map-instance" />
+                <div className="map-helper-text">
+                  <Navigation size={10} />
+                  <span>{t("create_post.map_instruction")}</span>
+                </div>
               </div>
             )}
-            <div
-              className={`location-status-badge ${location.lat !== 40.4167 ? "ready" : "searching"}`}
-            >
+
+            <div className={`location-status-badge ${location.lat !== 40.4167 ? "ready" : ""}`}>
               <Navigation size={12} />
               <span>
-                {isLocating
-                  ? t("create_post.loc_searching")
-                  : t("create_post.loc_fixed")}
+                {isLocating ? t("create_post.searching") : t("create_post.fixed")}
               </span>
             </div>
           </div>
 
+          {/* Resto del formulario igual... */}
           <div className="form-group">
             <div className="flex-label-header">
               <label>{t("create_post.participants")}</label>
@@ -355,28 +406,15 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
                     if (e.target.checked) setMaxParticipants("");
                   }}
                 />
-                <span className="checkbox-label">
-                  {t("create_post.unlimited")}
-                </span>
+                <span className="checkbox-label">{t("create_post.unlimited")}</span>
               </label>
             </div>
-
-            <div
-              className={`input-with-icon ${isUnlimited || isLocked ? "disabled-field" : ""}`}
-            >
-              <Users
-                size={16}
-                className="field-icon"
-                color="var(--text-muted)"
-              />
+            <div className={`input-with-icon ${isUnlimited || isLocked ? "disabled-field" : ""}`}>
+              <Users size={16} className="field-icon" color="var(--text-muted)" />
               <input
                 type="number"
                 min="1"
-                placeholder={
-                  isUnlimited
-                    ? t("create_post.unlimited")
-                    : t("create_post.limit_placeholder")
-                }
+                placeholder={isUnlimited ? t("create_post.unlimited") : t("create_post.limit_placeholder")}
                 value={maxParticipants}
                 disabled={isUnlimited || isLocked}
                 onChange={(e) => {
@@ -396,12 +434,30 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
               disabled={isLocked}
               onChange={(e) => {
                 setTitle(e.target.value);
-                if (errors.title)
-                  setErrors((prev) => ({ ...prev, title: false }));
+                if (errors.title) setErrors((prev) => ({ ...prev, title: false }));
               }}
               placeholder={t("create_post.title_placeholder")}
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label>{t("create_post.category")}</label>
+            <div className="category-picker-grid">
+              {categories.map((item) => (
+                <button
+                  type="button"
+                  key={item.slug}
+                  className={`category-pill ${category === item.slug ? "active" : ""}`}
+                  style={{ "--category-color": item.color } as React.CSSProperties}
+                  disabled={isLocked}
+                  onClick={() => setCategory(item.slug)}
+                >
+                  <span className="category-dot" />
+                  {getCategoryLabel(item, i18n.language)}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="form-group">
@@ -412,8 +468,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
               disabled={isLocked}
               onChange={(e) => {
                 setCaption(e.target.value);
-                if (errors.caption)
-                  setErrors((prev) => ({ ...prev, caption: false }));
+                if (errors.caption) setErrors((prev) => ({ ...prev, caption: false }));
               }}
               placeholder={t("create_post.desc_placeholder")}
               rows={3}
@@ -424,20 +479,9 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
           <button
             type="submit"
             className="submit-post-btn"
-            disabled={
-              isLocked ||
-              isAnalyzing ||
-              isLocating ||
-              !title ||
-              !caption ||
-              !image
-            }
+            disabled={isLocked || isAnalyzing || isLocating || !title || !caption || !image}
           >
-            {isLocked
-              ? t("common.locked")
-              : isAnalyzing
-                ? t("create_post.analyzing")
-                : t("create_post.submit")}
+            {isLocked ? t("common.locked") : isAnalyzing ? t("create_post.analyzing") : t("create_post.submit")}
           </button>
         </form>
       </div>

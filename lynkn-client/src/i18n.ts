@@ -20,16 +20,42 @@ const resources = {
         "loading": "CARGANDO...",
         "delete": "ELIMINAR",
         "continue": "CONTINUAR",
-        "or": "O"
+        "or": "O",
+        "error": "Error",
+        "locked": "BLOQUEADO"
+      },
+      "home": {
+        "login": "INICIA SESIÓN",
+        "register": "REGÍSTRATE",
+        "hero_title": "Encuentra tu próxima quedada.",
+        "hero_subtitle": "Eventos reales, grupos cercanos y planes que salen de la pantalla.",
+        "hero_tagline": "Conecta. Apúntate. Vive el plan.",
+        "hero_footer": "Descubre planes por mapa, solicita unirte y chatea con tu grupo.",
+        "manifesto_one_text": "Una red social pensada para",
+        "manifesto_one_highlight": "quedar de verdad.",
+        "manifesto_two_text": "Crea planes, limita plazas y activa conversaciones",
+        "manifesto_two_highlight": "cuando el grupo se forma.",
+        "legal_notice": "AVISO LEGAL",
+        "terms": "TÉRMINOS",
+        "privacy": "PRIVACIDAD",
+        "copyright": "© 2026 LYNKN TECH, S.L."
+      },
+      "map": {
+        "verified_member": "Miembro verificado",
+        "connected": "CONECTADO",
+        "mock_bio_explore": "Explorando Madrid",
+        "mock_bio_design": "Diseño y café"
       },
       "auth": {
         "login": {
-          "subtitle": "Acceso exclusivo al círculo.",
+          "subtitle": "Acceso a quedadas y eventos cerca de ti.",
           "identifier_placeholder": "EMAIL O USUARIO",
           "password_placeholder": "CONTRASEÑA",
           "submit": "ENTRAR",
           "btn_verifying": "VERIFICANDO...",
           "btn_google": "CONTINUAR CON GOOGLE",
+          "google_not_configured": "GOOGLE NO CONFIGURADO",
+          "mode_password": "CONTRASEÑA",
           "no_account": "¿Aún no eres miembro?",
           "link_register": "SOLICITA ACCESO",
           "error_default": "Credenciales incorrectas"
@@ -42,7 +68,9 @@ const resources = {
           "ERR_INVALID_CREDENTIALS": "Email o contraseña incorrectos.",
           "ERR_PWD_SHORT": "La contraseña debe tener al menos 8 caracteres.",
           "ERR_GOOGLE_TOKEN_INVALID": "Error al validar la cuenta de Google.",
+          "ERR_OTP_SESSION_INVALID": "No se pudo validar el código.",
           "ERR_BIRTH_REQUIRED": "La fecha de nacimiento es obligatoria.",
+          "ERR_TERMS_REQUIRED": "Debes aceptar los términos y condiciones para registrarte.",
           "invalid_data": "Los datos introducidos no son válidos.",
           "invalid_credentials": "El correo/usuario y/o la contraseña no coinciden.",
         }
@@ -50,6 +78,7 @@ const resources = {
       "register": {
         "step_basic": "DATOS BÁSICOS",
         "step_identity": "IDENTIDAD",
+        "success": "Registro completado. Ya puedes iniciar sesión.",
         "placeholders": {
           "username": "USUARIO",
           "email": "EMAIL",
@@ -68,7 +97,23 @@ const resources = {
           "avatar_required": "La foto de perfil es obligatoria.",
           "ai_no_face": "No se detecta un rostro claro.",
           "ai_no_match": "La identidad no coincide. Repite el selfie.",
-          "ai_error": "Error en el escaneo."
+          "ai_error": "Error en el escaneo.",
+          "terms_required": "Debes aceptar los términos y condiciones para registrarte."
+        },
+        "terms": {
+          "accept_prefix": "Acepto los",
+          "link": "términos y condiciones de uso",
+          "title": "Términos y condiciones de LYNKN",
+          "intro": "LYNKN es una app para crear, descubrir y participar en quedadas reales. Al registrarte aceptas usarla de forma responsable y respetuosa.",
+          "identity_title": "Identidad y verificación",
+          "identity_text": "Puedes tener acceso limitado hasta completar la verificación de identidad. Las imágenes enviadas se usarán para revisar tu perfil y proteger a la comunidad.",
+          "events_title": "Eventos y participación",
+          "events_text": "Debes publicar planes reales, asistir con respeto y no suplantar a otras personas. Los organizadores pueden gestionar solicitudes y participantes.",
+          "content_title": "Contenido permitido",
+          "content_text": "No se permite contenido violento, sexual explícito, discriminatorio, ilegal, spam, amenazas ni datos personales de terceros sin permiso.",
+          "privacy_title": "Datos y privacidad",
+          "privacy_text": "Guardamos la aceptación de estos términos junto a tu cuenta y la fecha de aceptación para cumplir obligaciones de seguridad y trazabilidad.",
+          "accept_action": "ACEPTAR TÉRMINOS"
         },
         "identity": {
           "biometric": "BIO-MÉTRICA",
@@ -82,7 +127,7 @@ const resources = {
       },
       "settings": {
         "title": "AJUSTES",
-        "subtitle": "Gestiona tu experiencia en Lynkn",
+        "subtitle": "Gestiona tu experiencia, identidad y preferencias de eventos",
         "sec_identity": "IDENTIDAD Y SEGURIDAD",
         "status_verified": "CUENTA VERIFICADA",
         "status_pending": "VERIFICACIÓN PENDIENTE",
@@ -94,6 +139,14 @@ const resources = {
         "interface_mode": "Modo de interfaz",
         "interface_desc": "Alternar entre tema claro y oscuro",
         "interface_lang": "Idioma de la interfaz",
+        "verify_sent": "Verificación enviada a revisión.",
+        "deleting_loader": "Eliminando cuenta...",
+        "delete_success": "Cuenta eliminada correctamente.",
+        "delete_error": "No se pudo eliminar la cuenta.",
+        "languages": {
+          "es": "Español (España)",
+          "en": "English (US)"
+        },
         "sec_danger": "ZONA DE PELIGRO",
         "delete_acc": "Eliminar cuenta definitivamente",
         "delete_acc_desc": "Esta acción es permanente y borrará todos tus datos.",
@@ -130,6 +183,10 @@ const resources = {
         "posts": "posts",
         "followers": "seguidores",
         "following": "seguidos",
+        "follow": "SEGUIR",
+        "unfollow": "SIGUIENDO",
+        "unfollow_action": "DEJAR DE SEGUIR",
+        "empty_follow_list": "No hay usuarios para mostrar.",
         "no_bio": "Sin biografía aún...",
         "no_location": "Ubicación no especificada",
         "rejected_title": "VERIFICACIÓN RECHAZADA",
@@ -137,9 +194,12 @@ const resources = {
         "rejected_desc": "Tu identidad no pudo ser confirmada. Por favor, revisa tus fotos.",
         "retry": "REINTENTAR",
         "view_posts": "POSTS",
+        "view_favorites": "FAVORITOS",
         "view_map": "MAPA",
         "empty_posts": "Aún no hay publicaciones",
-        "empty_posts_desc": "Tus capturas aparecerán aquí.",
+        "empty_posts_desc": "Tus quedadas y eventos aparecerán aquí.",
+        "empty_favorites": "Aún no hay favoritos",
+        "empty_favorites_desc": "Guarda quedadas para encontrarlas rápido después.",
         "upload_error": "Error al subir la verificación."
       },
       "edit_profile": {
@@ -151,10 +211,12 @@ const resources = {
         "username_placeholder": "Tu nombre público...",
         "location_placeholder": "Ej: Madrid, España",
         "bio_placeholder": "Cuéntanos un poco sobre ti...",
+        "preview_alt": "Vista previa del perfil",
         "saving": "GUARDANDO...",
         "save_btn": "GUARDAR CAMBIOS",
         "err_size": "La imagen es demasiado grande. Máximo 2MB.",
         "err_username": "El nombre de usuario es obligatorio.",
+        "err_moderation": "La IA ha detectado contenido no permitido en tu perfil.",
         "err_save": "No se pudieron guardar los cambios. Inténtalo de nuevo."
       },
       "delete_modal": {
@@ -173,15 +235,16 @@ const resources = {
       },
       "messages": {
         "search_placeholder": "BUSCAR CHATS O MENSAJES...",
-        "sidebar_title": "Tus Chats",
+        "sidebar_title": "Chats de eventos",
         "empty_events": "No tienes eventos activos",
         "chat_group": "Chat de grupo",
-        "pending_quota": "Cupo incompleto",
+        "pending_quota": "Esperando aceptación",
         "chat_locked_title": "Chat restringido",
-        "chat_locked_desc": "Este chat se abrirá cuando se complete el cupo.",
+        "chat_locked_desc": "Este chat se abrirá cuando el organizador acepte tu solicitud.",
         "no_chat_selected": "Selecciona un grupo para chatear",
         "input_placeholder": "Escribe un mensaje...",
-        "loading_chats": "Cargando chats..."
+        "loading_chats": "Cargando chats...",
+        "socket_error": "No se pudo completar la acción del chat."
       },
       "sidebar": {
         "main_menu": "MENÚ PRINCIPAL",
@@ -191,7 +254,7 @@ const resources = {
         "my_requests": "Mis solicitudes",
         "notifications": "Notificaciones",
         "actions": "ACCIONES",
-        "new_post": "Nuevo Post",
+        "new_post": "Crear quedada",
         "settings": "Ajustes",
         "logout": "Cerrar Sesión"
       },
@@ -222,9 +285,9 @@ const resources = {
         }
       },
       "create_post": {
-        "title": "NUEVA PUBLICACIÓN",
+        "title": "NUEVA QUEDADA",
         "restricted": "ACCIÓN RESTRINGIDA",
-        "restricted_desc": "Debes verificar tu identidad para poder realizar publicaciones en LYNKN.",
+        "restricted_desc": "Debes verificar tu identidad para crear quedadas en LYNKN.",
         "go_profile": "IR A MI PERFIL",
         "add_photo": "AÑADIR FOTO",
         "moderating": "MODERANDO...",
@@ -235,26 +298,57 @@ const resources = {
         "participants": "PARTICIPANTES",
         "unlimited": "ILIMITADO",
         "limit_placeholder": "Ej: 20",
+        "category": "CATEGORÍA",
         "post_title": "TÍTULO",
-        "title_placeholder": "Ej: Graffiti en Malasaña",
+        "title_placeholder": "Ej: Tarde de tapas en Malasaña",
         "description": "DESCRIPCIÓN",
-        "desc_placeholder": "¿Qué lo hace especial?",
+        "desc_placeholder": "Cuenta el plan, la hora y para quién encaja.",
         "submit": "PUBLICAR",
         "analyzing": "VERIFICANDO...",
         "success_title": "¡PUBLICADO!",
-        "success_desc": "Tu descubrimiento ya es parte del mapa.",
+        "success_desc": "Tu quedada ya aparece en el mapa.",
         "err_size": "Imagen demasiado pesada",
         "err_size_desc": "El límite es de 3MB para la validación por IA.",
         "err_quota": "Define el aforo",
         "err_quota_desc": "Indica al menos 1 participante.",
         "err_missing": "Faltan datos",
-        "err_security": "Rechazado por Seguridad"
+        "err_missing_desc": "Completa título, descripción e imagen.",
+        "err_location_not_found": "Ubicación no encontrada",
+        "err_security": "Rechazado por Seguridad",
+        "errors": {
+          "image_required": "La imagen es obligatoria.",
+          "inappropriate": "Contenido inapropiado detectado por la IA.",
+          "processing": "No se pudo procesar la publicación.",
+          "upload": "No se pudo subir la imagen."
+        },
+        "map_instruction": "Haz clic en el mapa para fijar el punto exacto",
+        "searching": "Localizando...",
+        "fixed": "Ubicación fijada"
       },
       "explore": {
-        "search_placeholder": "BUSCAR EVENTOS, GRUPOS...",
+        "search_placeholder": "BUSCAR EVENTOS, GRUPOS O DIRECCIONES...",
         "btn_map": "MAPA",
         "btn_posts": "POSTS",
         "details_btn": "VER DETALLES",
+        "view_switch_label": "Cambiar vista de exploración",
+        "filters": {
+          "open": "Abrir filtros",
+          "clear_search": "Limpiar búsqueda",
+          "status": "Estado",
+          "capacity": "Plazas",
+          "category": "Categoría",
+          "all": "Todos",
+          "available": "Disponibles",
+          "open_spots": "Por plaza",
+          "unlimited": "Acceso ilimitado",
+          "clear": "Limpiar filtros",
+          "empty_title": "No hay quedadas con esos filtros",
+          "empty_desc": "Prueba con otra búsqueda o limpia los filtros para ver más planes."
+        },
+        "profile_search": {
+          "title": "Perfiles",
+          "empty": "No hay perfiles con esa búsqueda."
+        },
         "security": {
           "pending_title": "ACCESO EN REVISIÓN",
           "pending_desc": "Tu solicitud está siendo validada. El acceso se activará tras la aprobación.",
@@ -265,6 +359,8 @@ const resources = {
       },
       "post_card": {
         "unlimited": "ILIMITADO",
+        "favorite_add": "Añadir a favoritos",
+        "favorite_remove": "Quitar de favoritos",
         "status": {
           "pending": "PENDIENTE",
           "accepted": "ACEPTADO",
@@ -279,13 +375,23 @@ const resources = {
         "btn_delete": "ELIMINAR",
         "btn_manage": "GESTIONAR",
         "btn_hide": "OCULTAR",
+        "unknown_user": "usuario",
+        "favorites": "FAVORITOS",
         "unlimited_event": "EVENTO ILIMITADO",
         "spots_left": "{{count}} plazas disponibles",
+        "toasts": {
+          "request_sent": "Solicitud enviada",
+          "request_error": "No se pudo enviar la solicitud",
+          "deleted": "Evento eliminado",
+          "delete_error": "Error al eliminar el post",
+          "status_updated": "Estado actualizado",
+          "action_error": "Error al procesar la acción"
+        },
         "status": {
           "denied": "ACCESO DENEGADO",
           "joining": "Enviando...",
           "join": "SOLICITAR UNIRSE",
-          "accepted": "INSCRITO - GESTIONAR",
+          "accepted": "INSCRITO - IR AL CHAT",
           "pending": "PENDIENTE"
         }
       },
@@ -302,6 +408,138 @@ const resources = {
           "reject": "Rechazar",
           "kick": "Expulsar",
           "full": "Evento lleno"
+        }
+      },
+      "admin_dashboard": {
+        "rail_label": "Admin OS",
+        "pending_verifications_short": "verificaciones pendientes",
+        "eyebrow": "Panel de control",
+        "title": "Administración de comunidad y eventos",
+        "search_placeholder": "Buscar usuarios, posts, estados...",
+        "refresh": "Actualizar",
+        "metrics": {
+          "users": "Usuarios",
+          "pending_verifications": "Verificaciones pendientes",
+          "visible_posts": "Posts visibles",
+          "participations": "Participaciones",
+          "messages": "Mensajes",
+          "reported_posts": "Posts reportados"
+        },
+        "tabs": {
+          "overview": "Overview",
+          "verification": "Verificación ({{count}})",
+          "users": "Usuarios",
+          "posts": "Posts",
+          "reports": "Reportes ({{count}})"
+        },
+        "overview": {
+          "verification_health": "Salud de verificación",
+          "top_events": "Top eventos por asistencia",
+          "attendees": "{{current}}/{{max}} asistentes",
+          "quick_moderation": "Moderación rápida",
+          "activity_feed": "Actividad reciente de la app",
+          "hidden_posts": "posts ocultos",
+          "received_reports": "reportes recibidos",
+          "pending_requests": "solicitudes pendientes",
+          "active_admins": "administradores activos"
+        },
+        "activity": {
+          "user": "Usuario",
+          "post": "Post",
+          "message": "Chat",
+          "notification": "Aviso",
+          "report": "Reporte",
+          "no_date": "Sin fecha",
+          "empty": "Aún no hay actividad para mostrar."
+        },
+        "verification": {
+          "empty_title": "Todo al día",
+          "empty_desc": "No hay perfiles pendientes de revisión.",
+          "profile": "Perfil",
+          "selfie": "Selfie",
+          "profile_alt": "Perfil de {{username}}",
+          "selfie_alt": "Selfie de {{username}}",
+          "note_placeholder": "Nota para el usuario si se rechaza..."
+        },
+        "quick_notes": {
+          "face_not_clear": "La foto de perfil no muestra una cara clara.",
+          "selfie_mismatch": "La selfie no coincide con la foto de perfil.",
+          "blurry_image": "La imagen está borrosa o con poca luz.",
+          "close_face": "Se necesita un primer plano del rostro.",
+          "inappropriate": "Contenido inapropiado detectado."
+        },
+        "columns": {
+          "user": "Usuario",
+          "role": "Rol",
+          "verification": "Verificación",
+          "bio": "Bio",
+          "post": "Post",
+          "status": "Estado",
+          "visibility": "Visibilidad",
+          "attendance": "Asistencia",
+          "actions": "Acciones",
+          "reported_post": "Post reportado",
+          "reported_by": "Reportado por",
+          "reason": "Motivo",
+          "action": "Acción"
+        },
+        "actions": {
+          "approve": "Aprobar",
+          "reject": "Rechazar",
+          "show": "Mostrar",
+          "hide": "Ocultar",
+          "hide_post": "Ocultar post",
+          "reject_profile": "Rechazar perfil"
+        },
+        "roles": {
+          "user": "Usuario",
+          "admin": "Admin"
+        },
+        "visibility": {
+          "hidden": "Oculto",
+          "visible": "Visible"
+        },
+        "empty": {
+          "users": "No hay usuarios para mostrar",
+          "posts": "No hay posts para mostrar",
+          "reports": "No hay reportes pendientes",
+          "no_bio": "Sin bio",
+          "no_user": "sin usuario",
+          "general": "general",
+          "unknown_organizer": "organizador desconocido",
+          "user": "usuario",
+          "no_email": "sin email",
+          "no_reason": "Sin motivo"
+        },
+        "reports": {
+          "count": "{{count}} reportes"
+        },
+        "dialog": {
+          "reject_title": "Confirmar rechazo",
+          "reject_text": "Vas a rechazar la verificación de @{{username}}.",
+          "reject_placeholder": "Motivo recomendado para que el usuario pueda corregirlo..."
+        },
+        "status_values": {
+          "approved": "Aprobado",
+          "pending": "Pendiente",
+          "rejected": "Rechazado",
+          "unverified": "Sin verificar",
+          "accepted": "Aceptado",
+          "active": "Activo",
+          "hidden": "Oculto",
+          "visible": "Visible",
+          "unknown": "Desconocido"
+        },
+        "toasts": {
+          "load_error": "No se pudieron cargar datos admin. Revisa sesión admin y backend.",
+          "user_approved": "Usuario aprobado",
+          "user_updated": "Usuario actualizado",
+          "verification_error": "No se pudo actualizar la verificación",
+          "role_updated": "Rol actualizado para @{{username}}",
+          "role_error": "No se pudo actualizar el rol",
+          "post_visible": "Post visible de nuevo",
+          "post_hidden": "Post ocultado",
+          "visibility_error": "No se pudo cambiar la visibilidad del post"
         }
       },
       "confirm_delete": {
@@ -337,16 +575,42 @@ const resources = {
         "loading": "LOADING...",
         "delete": "DELETE",
         "continue": "CONTINUE",
-        "or": "OR"
+        "or": "OR",
+        "error": "Error",
+        "locked": "LOCKED"
+      },
+      "home": {
+        "login": "SIGN IN",
+        "register": "SIGN UP",
+        "hero_title": "Find your next meetup.",
+        "hero_subtitle": "Real events, nearby groups and plans that move beyond the screen.",
+        "hero_tagline": "Connect. Join. Live the plan.",
+        "hero_footer": "Discover plans on the map, request to join and chat with your group.",
+        "manifesto_one_text": "A social network built to",
+        "manifesto_one_highlight": "meet for real.",
+        "manifesto_two_text": "Create plans, limit spots and unlock conversations",
+        "manifesto_two_highlight": "when the group is formed.",
+        "legal_notice": "LEGAL NOTICE",
+        "terms": "TERMS",
+        "privacy": "PRIVACY",
+        "copyright": "© 2026 LYNKN TECH, S.L."
+      },
+      "map": {
+        "verified_member": "Verified member",
+        "connected": "CONNECTED",
+        "mock_bio_explore": "Exploring Madrid",
+        "mock_bio_design": "Design and coffee"
       },
       "auth": {
         "login": {
-          "subtitle": "Exclusive access to the circle.",
+          "subtitle": "Access meetups and events near you.",
           "identifier_placeholder": "EMAIL OR USERNAME",
           "password_placeholder": "PASSWORD",
           "submit": "SIGN IN",
           "btn_verifying": "VERIFYING...",
           "btn_google": "CONTINUE WITH GOOGLE",
+          "google_not_configured": "GOOGLE NOT CONFIGURED",
+          "mode_password": "PASSWORD",
           "no_account": "Not a member yet?",
           "link_register": "REQUEST ACCESS",
           "error_default": "Invalid credentials"
@@ -358,7 +622,9 @@ const resources = {
           "ERR_INVALID_CREDENTIALS": "Invalid email or password.",
           "ERR_PWD_SHORT": "Password must be at least 8 characters long.",
           "ERR_GOOGLE_TOKEN_INVALID": "Error validating Google account.",
+          "ERR_OTP_SESSION_INVALID": "Could not validate the code.",
           "ERR_BIRTH_REQUIRED": "Date of birth is required.",
+          "ERR_TERMS_REQUIRED": "You must accept the terms and conditions to register.",
           "invalid_data": "The entered data is invalid.",
           "invalid_credentials": "The email/username and/or password do not match."
         }
@@ -366,6 +632,7 @@ const resources = {
       "register": {
         "step_basic": "BASIC INFO",
         "step_identity": "IDENTITY",
+        "success": "Registration complete. You can now sign in.",
         "placeholders": {
           "username": "USERNAME",
           "email": "EMAIL",
@@ -384,7 +651,23 @@ const resources = {
           "avatar_required": "Profile picture is required.",
           "ai_no_face": "No clear face detected.",
           "ai_no_match": "Identity does not match. Retake selfie.",
-          "ai_error": "Scanning error."
+          "ai_error": "Scanning error.",
+          "terms_required": "You must accept the terms and conditions to register."
+        },
+        "terms": {
+          "accept_prefix": "I accept the",
+          "link": "terms and conditions of use",
+          "title": "LYNKN terms and conditions",
+          "intro": "LYNKN is an app for creating, discovering and joining real-life meetups. By registering, you agree to use it responsibly and respectfully.",
+          "identity_title": "Identity and verification",
+          "identity_text": "You may have limited access until identity verification is complete. Submitted images are used to review your profile and protect the community.",
+          "events_title": "Events and participation",
+          "events_text": "You must publish real plans, participate respectfully and avoid impersonating other people. Organizers can manage requests and participants.",
+          "content_title": "Allowed content",
+          "content_text": "Violent, sexually explicit, discriminatory, illegal, spam, threatening content or third-party personal data without permission is not allowed.",
+          "privacy_title": "Data and privacy",
+          "privacy_text": "We store your acceptance of these terms with your account and the acceptance date for safety and traceability obligations.",
+          "accept_action": "ACCEPT TERMS"
         },
         "identity": {
           "biometric": "BIO-METRIC",
@@ -398,7 +681,7 @@ const resources = {
       },
       "settings": {
         "title": "SETTINGS",
-        "subtitle": "Manage your Lynkn experience",
+        "subtitle": "Manage your experience, identity and event preferences",
         "sec_identity": "IDENTITY & SECURITY",
         "status_verified": "VERIFIED ACCOUNT",
         "status_pending": "PENDING VERIFICATION",
@@ -410,6 +693,14 @@ const resources = {
         "interface_mode": "Interface mode",
         "interface_desc": "Toggle between light and dark theme",
         "interface_lang": "Interface language",
+        "verify_sent": "Verification sent for review.",
+        "deleting_loader": "Deleting account...",
+        "delete_success": "Account deleted successfully.",
+        "delete_error": "Could not delete account.",
+        "languages": {
+          "es": "Spanish (Spain)",
+          "en": "English (US)"
+        },
         "sec_danger": "DANGER ZONE",
         "delete_acc": "Permanently delete account",
         "delete_acc_desc": "This action is permanent and will delete all your data.",
@@ -446,6 +737,10 @@ const resources = {
         "posts": "posts",
         "followers": "followers",
         "following": "following",
+        "follow": "FOLLOW",
+        "unfollow": "FOLLOWING",
+        "unfollow_action": "UNFOLLOW",
+        "empty_follow_list": "No users to show.",
         "no_bio": "No biography yet...",
         "no_location": "Location not specified",
         "rejected_title": "VERIFICATION REJECTED",
@@ -453,9 +748,12 @@ const resources = {
         "rejected_desc": "Your identity could not be confirmed. Please check your photos.",
         "retry": "RETRY",
         "view_posts": "POSTS",
+        "view_favorites": "FAVORITES",
         "view_map": "MAP",
         "empty_posts": "No posts yet",
-        "empty_posts_desc": "Your captures will appear here.",
+        "empty_posts_desc": "Your meetups and events will appear here.",
+        "empty_favorites": "No favorites yet",
+        "empty_favorites_desc": "Save meetups to find them quickly later.",
         "upload_error": "Error uploading verification."
       },
       "edit_profile": {
@@ -467,10 +765,12 @@ const resources = {
         "username_placeholder": "Your public name...",
         "location_placeholder": "E.g.: Madrid, Spain",
         "bio_placeholder": "Tell us a bit about yourself...",
+        "preview_alt": "Profile preview",
         "saving": "SAVING...",
         "save_btn": "SAVE CHANGES",
         "err_size": "The image is too large. Max 2MB.",
         "err_username": "Username is required.",
+        "err_moderation": "AI detected content that is not allowed in your profile.",
         "err_save": "Could not save changes. Please try again."
       },
       "delete_modal": {
@@ -489,15 +789,16 @@ const resources = {
       },
       "messages": {
         "search_placeholder": "SEARCH CHATS OR MESSAGES...",
-        "sidebar_title": "Your Chats",
+        "sidebar_title": "Event chats",
         "empty_events": "No active events",
         "chat_group": "Group Chat",
-        "pending_quota": "Quota incomplete",
+        "pending_quota": "Waiting for approval",
         "chat_locked_title": "Restricted Chat",
-        "chat_locked_desc": "This chat will open once the quota is full.",
+        "chat_locked_desc": "This chat will open when the organizer accepts your request.",
         "no_chat_selected": "Select a group to chat",
         "input_placeholder": "Type a message...",
-        "loading_chats": "Loading chats..."
+        "loading_chats": "Loading chats...",
+        "socket_error": "Could not complete the chat action."
       },
       "sidebar": {
         "main_menu": "MAIN MENU",
@@ -507,7 +808,7 @@ const resources = {
         "my_requests": "MY REQUESTS",
         "notifications": "NOTIFICATIONS",
         "actions": "ACTIONS",
-        "new_post": "NEW POST",
+        "new_post": "CREATE MEETUP",
         "settings": "SETTINGS",
         "logout": "LOGOUT"
       },
@@ -538,39 +839,70 @@ const resources = {
         }
       },
       "create_post": {
-        "title": "NEW POST",
+        "title": "NEW MEETUP",
         "restricted": "ACTION RESTRICTED",
-        "restricted_desc": "You must verify your identity to be able to post on LYNKN.",
+        "restricted_desc": "You must verify your identity to create meetups on LYNKN.",
         "go_profile": "GO TO PROFILE",
         "add_photo": "ADD PHOTO",
         "moderating": "MODERATING...",
         "loc_label": "EVENT LOCATION",
         "search_place": "Search for a place...",
-        "loc_fixed": "Location set",
-        "loc_searching": "Locating...",
+        "fixed": "Location set",
+        "searching": "Locating...",
         "participants": "PARTICIPANTS",
         "unlimited": "UNLIMITED",
         "limit_placeholder": "E.g.: 20",
+        "category": "CATEGORY",
         "post_title": "TITLE",
-        "title_placeholder": "E.g.: Street art in London",
+        "title_placeholder": "E.g.: Tapas evening in London",
         "description": "DESCRIPTION",
-        "desc_placeholder": "What makes it special?",
+        "desc_placeholder": "Describe the plan, time and who it is for.",
         "submit": "POST",
         "analyzing": "VERIFYING...",
         "success_title": "PUBLISHED!",
-        "success_desc": "Your discovery is now part of the map.",
+        "success_desc": "Your meetup is now on the map.",
         "err_size": "Image too heavy",
         "err_size_desc": "The limit is 3MB for AI validation.",
         "err_quota": "Set capacity",
         "err_quota_desc": "Indicate at least 1 participant.",
         "err_missing": "Missing data",
-        "err_security": "Security Rejection"
+        "err_missing_desc": "Complete title, description and image.",
+        "err_location_not_found": "Location not found",
+        "err_security": "Security Rejection",
+        "errors": {
+          "image_required": "Image is required.",
+          "inappropriate": "Inappropriate content detected by AI.",
+          "processing": "Could not process the post.",
+          "upload": "Could not upload the image."
+        },
+        "map_instruction": "Click on the map to fix the exact location",
+        "loc_searching": "Locating...",
+        "loc_fixed": "Location set"
       },
       "explore": {
-        "search_placeholder": "SEARCH EVENTS, GROUPS...",
+        "search_placeholder": "SEARCH EVENTS, GROUPS OR ADDRESSES...",
         "btn_map": "MAP",
         "btn_posts": "POSTS",
         "details_btn": "VIEW DETAILS",
+        "view_switch_label": "Switch exploration view",
+        "filters": {
+          "open": "Open filters",
+          "clear_search": "Clear search",
+          "status": "Status",
+          "capacity": "Capacity",
+          "category": "Category",
+          "all": "All",
+          "available": "Available",
+          "open_spots": "By spot",
+          "unlimited": "Unlimited access",
+          "clear": "Clear filters",
+          "empty_title": "No meetups match those filters",
+          "empty_desc": "Try another search or clear the filters to see more plans."
+        },
+        "profile_search": {
+          "title": "Profiles",
+          "empty": "No profiles match that search."
+        },
         "security": {
           "pending_title": "ACCESS UNDER REVIEW",
           "pending_desc": "Your request is being validated. Access will be activated after approval.",
@@ -581,6 +913,8 @@ const resources = {
       },
       "post_card": {
         "unlimited": "UNLIMITED",
+        "favorite_add": "Add to favorites",
+        "favorite_remove": "Remove from favorites",
         "status": {
           "pending": "PENDING",
           "accepted": "ACCEPTED",
@@ -595,13 +929,23 @@ const resources = {
         "btn_delete": "DELETE",
         "btn_manage": "MANAGE",
         "btn_hide": "HIDE",
+        "unknown_user": "user",
+        "favorites": "FAVORITES",
         "unlimited_event": "UNLIMITED EVENT",
         "spots_left": "{{count}} spots left",
+        "toasts": {
+          "request_sent": "Request sent",
+          "request_error": "Could not send the request",
+          "deleted": "Event deleted",
+          "delete_error": "Error deleting the post",
+          "status_updated": "Status updated",
+          "action_error": "Error processing the action"
+        },
         "status": {
           "denied": "ACCESS DENIED",
           "joining": "Sending...",
           "join": "REQUEST TO JOIN",
-          "accepted": "JOINED - MANAGE",
+          "accepted": "JOINED - OPEN CHAT",
           "pending": "PENDING"
         }
       },
@@ -618,6 +962,138 @@ const resources = {
           "reject": "Reject",
           "kick": "Kick out",
           "full": "Event full"
+        }
+      },
+      "admin_dashboard": {
+        "rail_label": "Admin OS",
+        "pending_verifications_short": "pending verifications",
+        "eyebrow": "Control panel",
+        "title": "Community and event administration",
+        "search_placeholder": "Search users, posts, statuses...",
+        "refresh": "Refresh",
+        "metrics": {
+          "users": "Users",
+          "pending_verifications": "Pending verifications",
+          "visible_posts": "Visible posts",
+          "participations": "Participations",
+          "messages": "Messages",
+          "reported_posts": "Reported posts"
+        },
+        "tabs": {
+          "overview": "Overview",
+          "verification": "Verification ({{count}})",
+          "users": "Users",
+          "posts": "Posts",
+          "reports": "Reports ({{count}})"
+        },
+        "overview": {
+          "verification_health": "Verification health",
+          "top_events": "Top events by attendance",
+          "attendees": "{{current}}/{{max}} attendees",
+          "quick_moderation": "Quick moderation",
+          "activity_feed": "Recent app activity",
+          "hidden_posts": "hidden posts",
+          "received_reports": "received reports",
+          "pending_requests": "pending requests",
+          "active_admins": "active administrators"
+        },
+        "activity": {
+          "user": "User",
+          "post": "Post",
+          "message": "Chat",
+          "notification": "Notice",
+          "report": "Report",
+          "no_date": "No date",
+          "empty": "No activity to show yet."
+        },
+        "verification": {
+          "empty_title": "All caught up",
+          "empty_desc": "There are no profiles pending review.",
+          "profile": "Profile",
+          "selfie": "Selfie",
+          "profile_alt": "{{username}} profile",
+          "selfie_alt": "{{username}} selfie",
+          "note_placeholder": "Note for the user if rejected..."
+        },
+        "quick_notes": {
+          "face_not_clear": "The profile photo does not show a clear face.",
+          "selfie_mismatch": "The selfie does not match the profile photo.",
+          "blurry_image": "The image is blurry or poorly lit.",
+          "close_face": "A close-up of the face is needed.",
+          "inappropriate": "Inappropriate content detected."
+        },
+        "columns": {
+          "user": "User",
+          "role": "Role",
+          "verification": "Verification",
+          "bio": "Bio",
+          "post": "Post",
+          "status": "Status",
+          "visibility": "Visibility",
+          "attendance": "Attendance",
+          "actions": "Actions",
+          "reported_post": "Reported post",
+          "reported_by": "Reported by",
+          "reason": "Reason",
+          "action": "Action"
+        },
+        "actions": {
+          "approve": "Approve",
+          "reject": "Reject",
+          "show": "Show",
+          "hide": "Hide",
+          "hide_post": "Hide post",
+          "reject_profile": "Reject profile"
+        },
+        "roles": {
+          "user": "User",
+          "admin": "Admin"
+        },
+        "visibility": {
+          "hidden": "Hidden",
+          "visible": "Visible"
+        },
+        "empty": {
+          "users": "No users to show",
+          "posts": "No posts to show",
+          "reports": "No pending reports",
+          "no_bio": "No bio",
+          "no_user": "no user",
+          "general": "general",
+          "unknown_organizer": "unknown organizer",
+          "user": "user",
+          "no_email": "no email",
+          "no_reason": "No reason"
+        },
+        "reports": {
+          "count": "{{count}} reports"
+        },
+        "dialog": {
+          "reject_title": "Confirm rejection",
+          "reject_text": "You are about to reject @{{username}}'s verification.",
+          "reject_placeholder": "Recommended reason so the user can fix it..."
+        },
+        "status_values": {
+          "approved": "Approved",
+          "pending": "Pending",
+          "rejected": "Rejected",
+          "unverified": "Unverified",
+          "accepted": "Accepted",
+          "active": "Active",
+          "hidden": "Hidden",
+          "visible": "Visible",
+          "unknown": "Unknown"
+        },
+        "toasts": {
+          "load_error": "Could not load admin data. Check admin session and backend.",
+          "user_approved": "User approved",
+          "user_updated": "User updated",
+          "verification_error": "Could not update verification",
+          "role_updated": "Role updated for @{{username}}",
+          "role_error": "Could not update the role",
+          "post_visible": "Post visible again",
+          "post_hidden": "Post hidden",
+          "visibility_error": "Could not change post visibility"
         }
       },
       "confirm_delete": {
@@ -644,6 +1120,13 @@ i18n
   .init({
     resources,
     fallbackLng: "es",
+    supportedLngs: ["es", "en"],
+    load: "languageOnly",
+    detection: {
+      order: ["localStorage", "navigator"],
+      lookupLocalStorage: "i18nextLng",
+      caches: ["localStorage"]
+    },
     interpolation: {
       escapeValue: false
     }

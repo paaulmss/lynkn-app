@@ -13,11 +13,48 @@ export class AdminController {
     return this.adminService.getPendingUsers();
   }
 
+  @Get('dashboard')
+  async dashboard() {
+    return this.adminService.getDashboard();
+  }
+
+  @Get('users')
+  async listUsers() {
+    return this.adminService.getUsers();
+  }
+
+  @Get('posts')
+  async listPosts() {
+    return this.adminService.getPosts();
+  }
+
+  @Get('reports')
+  async listReports() {
+    return this.adminService.getReports();
+  }
+
   @Patch('verify/:id')
   async verifyUser(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: 'approved' | 'rejected',
+    @Body('status') status: 'approved' | 'rejected' | 'pending' | 'unverified',
+    @Body('message') message?: string,
   ) {
-    return this.adminService.updateVerificationStatus(id, status);
+    return this.adminService.updateVerificationStatus(id, status, message);
+  }
+
+  @Patch('users/:id/role')
+  async updateRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('role') role: 'admin' | 'user',
+  ) {
+    return this.adminService.updateUserRole(id, role);
+  }
+
+  @Patch('posts/:id/visibility')
+  async updatePostVisibility(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('is_visible') isVisible: boolean,
+  ) {
+    return this.adminService.updatePostVisibility(id, isVisible);
   }
 }

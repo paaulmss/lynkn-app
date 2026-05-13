@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChangeEvent, FormEvent } from "react"; 
 import { X, UploadCloud, User, MapPin, AlignLeft } from "lucide-react";
+import { toast } from "sonner";
 import api from "../../api/axiosConfig";
 import "./EditProfileModal.css";
 
@@ -16,7 +17,16 @@ interface User {
 interface EditProfileModalProps {
   user: User;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (updatedUser: User) => void;
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+  };
 }
 
 const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) => {
@@ -38,7 +48,7 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert(t('edit_profile.err_size'));
+        toast.error(t('edit_profile.err_size'));
         return;
       }
 
@@ -55,18 +65,26 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.username.trim()) {
-      alert(t('edit_profile.err_username'));
+      toast.error(t('edit_profile.err_username'));
       return;
     }
 
     setIsSaving(true);
     try {
-      await api.put(`/users/${user.id}/profile`, formData);
-      onSuccess(); 
+      const response = await api.put(`/users/${user.id}/profile`, formData);
+      onSuccess(response.data); 
       onClose();
     } catch (error) {
       console.error("Error al actualizar perfil:", error);
-      alert(t('edit_profile.err_save'));
+      const apiError = error as ApiError;
+      const message = apiError.response?.data?.message || apiError.response?.data?.error || "";
+      if (String(message).includes("PROFILE_CONTENT_REJECTED")) {
+        toast.error(t('edit_profile.err_moderation'));
+      } else if (String(message).includes("ERR_USERNAME_EXISTS")) {
+        toast.error(t('register.errors.ERR_USERNAME_EXISTS'));
+      } else {
+        toast.error(t('edit_profile.err_save'));
+      }
     } finally {
       setIsSaving(false);
     }
@@ -87,7 +105,7 @@ const EditProfileModal = ({ user, onClose, onSuccess }: EditProfileModalProps) =
             <div className="avatar-preview-wrapper" onClick={() => fileInputRef.current?.click()}>
               <img 
                 src={previewImage} 
-                alt="Vista previa perfil" 
+                alt={t('edit_profile.preview_alt')}
                 className="avatar-preview-img" 
                 onError={(e) => { (e.target as HTMLImageElement).src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" }}
               />

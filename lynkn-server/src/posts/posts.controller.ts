@@ -66,15 +66,52 @@ async create(@UploadedFile() file: any, @Body() body: any) {
   }
 }
 
+  @Get("categories")
+  async getCategories() {
+    return this.postsService.findCategories();
+  }
+
   @Get()
 async getAll(@Query("exclude") excludeUserId?: string) {
   const userId = excludeUserId ? parseInt(excludeUserId) : undefined;
-  return this.postsService.findAll(userId);
+  return this.postsService.findAll(userId, userId);
 }
 
   @Get("user/:userId")
-  async findByUser(@Param("userId", ParseIntPipe) userId: number) {
-    return this.postsService.findByUser(userId);
+  async findByUser(
+    @Param("userId", ParseIntPipe) userId: number,
+    @Query("viewerId") viewerId?: string,
+  ) {
+    return this.postsService.findByUser(userId, viewerId ? parseInt(viewerId) : undefined);
+  }
+
+  @Get("favorites/:userId")
+  async getFavoritePosts(@Param("userId", ParseIntPipe) userId: number) {
+    return this.postsService.getFavoritePosts(userId);
+  }
+
+  @Get(":id/social")
+  async getPostSocial(
+    @Param("id", ParseIntPipe) id: number,
+    @Query("userId") userId?: string,
+  ) {
+    return this.postsService.getPostSocial(id, userId ? parseInt(userId) : undefined);
+  }
+
+  @Post(":id/favorite")
+  async addFavorite(
+    @Param("id", ParseIntPipe) id: number,
+    @Body("userId") userId: number,
+  ) {
+    return this.postsService.addFavorite(id, userId);
+  }
+
+  @Delete(":id/favorite")
+  async removeFavorite(
+    @Param("id", ParseIntPipe) id: number,
+    @Query("userId", ParseIntPipe) userId: number,
+  ) {
+    return this.postsService.removeFavorite(id, userId);
   }
 
   @Get("user-requests/:userId")
