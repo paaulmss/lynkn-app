@@ -1,3 +1,4 @@
+import { VerificationDto, RoleDto, VisibilityDto } from '../common/dtos';
 import { Controller, Get, Patch, Param, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -36,25 +37,24 @@ export class AdminController {
   @Patch('verify/:id')
   async verifyUser(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: 'approved' | 'rejected' | 'pending' | 'unverified',
-    @Body('message') message?: string,
+    @Body() dto: VerificationDto,
   ) {
-    return this.adminService.updateVerificationStatus(id, status, message);
+    return this.adminService.updateVerificationStatus(id, dto.status, dto.message);
   }
 
   @Patch('users/:id/role')
   async updateRole(
     @Param('id', ParseIntPipe) id: number,
-    @Body('role') role: 'admin' | 'user',
+    @Body() dto: RoleDto,
   ) {
-    return this.adminService.updateUserRole(id, role);
+    return this.adminService.updateUserRole(id, dto.role);
   }
 
   @Patch('posts/:id/visibility')
   async updatePostVisibility(
     @Param('id', ParseIntPipe) id: number,
-    @Body('is_visible') isVisible: boolean,
+    @Body() dto: VisibilityDto,
   ) {
-    return this.adminService.updatePostVisibility(id, isVisible);
+    return this.adminService.updatePostVisibility(id, dto.is_visible);
   }
 }

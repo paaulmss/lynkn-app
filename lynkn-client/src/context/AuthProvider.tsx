@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './AuthContext';
 import type { User } from './AuthContext'; 
 import { useTranslation } from 'react-i18next';
-import api from '../api/axiosConfig';
+import api, { SESSION_EXPIRED_EVENT } from '../api/axiosConfig';
+import { chatService } from '../services/chatService';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
@@ -87,13 +88,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const logout = useCallback(() => {
+    chatService.disconnect();
     localStorage.removeItem('lynkn_token');
     localStorage.removeItem('lynkn_user');
     localStorage.removeItem('theme');
     setToken(null);
     setUser(null);
-    navigate('/login');
+    setIsSidebarOpen(false);
+    navigate('/login', { replace: true });
   }, [navigate]);
+
+  useEffect(() => {
+    const expired = () => logout();
+    const storageChanged = (event: StorageEvent) => {
+      if (event.key === 'lynkn_token' || event.key === null) {
+        if (!localStorage.getItem('lynkn_token')) logout();
+        else { chatService.disconnect(); setToken(localStorage.getItem('lynkn_token')); setUser(null); }
+      }
+    };
+    const pageRestored = () => {
+      if (token && !localStorage.getItem('lynkn_token')) logout();
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, expired);
+    window.addEventListener('storage', storageChanged);
+    window.addEventListener('pageshow', pageRestored);
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
+      window.removeEventListener('storage', storageChanged);
+      window.removeEventListener('pageshow', pageRestored);
+    };
+  }, [logout, token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const controller = new AbortController();
+    api.get<User>('/auth/me', { signal: controller.signal }).then(({ data }) => {
+      // A response from the previous session must not restore a logged-out user.
+      if (controller.signal.aborted || localStorage.getItem('lynkn_token') !== token) return;
+      setUser(data); localStorage.setItem('lynkn_user', JSON.stringify(data));
+    }).catch(() => { /* 401 is handled by the interceptor. */ });
+    return () => controller.abort();
+  }, [token]);
 
   const login = (data: { access_token: string; user: User }) => {
     const normalizedUser: User = {
@@ -109,7 +144,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setToken(data.access_token);
     setUser(normalizedUser);
     
-    navigate(normalizedUser.role === 'admin' ? '/admin-panel' : '/explore');
+    navigate(normalizedUser.role === 'admin' ? '/admin-panel' : '/explore', { replace: true });
   };
 
   return (
@@ -121,7 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         logout, 
         updatePreferences,
         updateUser,
-        isAuthenticated: !!token,
+        isAuthenticated: !!token && !!user,
         isSidebarOpen,
         setIsSidebarOpen,
         toggleSidebar

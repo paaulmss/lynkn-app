@@ -1,15 +1,19 @@
-FROM node:20-alpine AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY tsconfig.json ./
+COPY src ./src
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:22-bookworm-slim AS runtime
+ENV NODE_ENV=production
+ENV PORT=10000
 WORKDIR /app
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/dist ./dist
-RUN npm install --only=production
-
-EXPOSE 3000
-CMD ["node", "dist/main"]
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
+COPY --from=build --chown=node:node /app/dist ./dist
+USER node
+EXPOSE 10000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+CMD ["node", "dist/main.js"]

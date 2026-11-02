@@ -1,28 +1,37 @@
-
+export type Role = 'user' | 'admin';
+export type VerificationStatus = 'unverified' | 'pending' | 'approved' | 'rejected';
 export interface User {
   id: number;
   username: string;
-  email: string;
-  birth_day: string;
+  email?: string;
+  birth_day?: string | null;
   foto_perfil: string;
-  selfie_real_time: string;
-  is_verified: boolean;
-  status_verif: 'unverified' | 'pending' | 'approved' | 'rejected';
-  role: 'user' | 'admin';
+  bio?: string;
+  location?: string;
+  role: Role;
+  status_verif: VerificationStatus;
   verif_message?: string;
+  theme: 'light' | 'dark';
+  language: 'es' | 'en';
 }
-
 export interface Post {
-  id: string;
+  id: number;
+  user_id: number;
   title: string;
   description: string;
   image_url?: string;
   category: string;
-  max_participants: number;
-  current_participants: number;
   lat: number;
   lng: number;
-  created_at: string;
-  expires_at: string;
-  user_id: string;
+  max_particip?: number;
+  current_particip?: number;
+  favorite_count?: number;
+  is_favorited?: boolean;
+  created_at?: string;
+  event_date?: string;
+  status?: string;
+  likes?: number;
+  comments?: number;
+  users?: { username: string; foto_perfil: string };
+  userStatus?: 'available' | 'pending' | 'accepted' | 'rejected';
 }

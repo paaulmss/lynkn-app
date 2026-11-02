@@ -1,0 +1,35 @@
+node_modules/
+dist/
+.env
+lynkn-client/android/.gradle/
+lynkn-client/android/build/
+# Local configuration, build output and editor caches
+.env.*
+!.env.example
+*.tsbuildinfo
+coverage/
+*.log
+.DS_Store
+lynkn-client/ios/App/Pods/
+lynkn-client/ios/App/build/
+# Local database-security snapshot; keep for reference, not as application source.
+database/security-baseline-*.json
+# Private credentials, signing material and local mobile configuration
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+local.properties
+# Local editor and assistant state
+.idea/
+.codex/
+.agents/
+.vscode/*
+!.vscode/extensions.json
+# Internal working notes and local demo tooling are not part of the public repo.
+.local-notes/
+lynkn-server/src/seed.ts
+lynkn-server/src/seed-profiles.ts

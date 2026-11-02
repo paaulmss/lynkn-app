@@ -1,99 +1,55 @@
-import { Body, Controller, Delete, ForbiddenException, Get, InternalServerErrorException, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedRequest, assertOwner, toSessionUser } from '../common/security';
+import { PreferencesDto, ProfileDto, SearchDto } from '../common/dtos';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
-
+  constructor(private readonly users: UsersService) {}
   @Get('approved')
-  async getApprovedUsers() {
-    return await this.usersService.findApproved();
-  }
-
+  approved() { return this.users.findApproved(); }
   @Get('search')
-  async searchUsers(
-    @Query('q') query = '',
-    @Query('viewerId') viewerId?: string
-  ) {
-    return this.usersService.searchUsers(query, viewerId ? parseInt(viewerId) : undefined);
+  search(@Query() dto: SearchDto, @Req() req: AuthenticatedRequest) {
+    return this.users.searchUsers(dto.q, req.user.userId);
   }
-
   @Get(':id/social')
-  async getSocialStats(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('viewerId') viewerId?: string
-  ) {
-    return this.usersService.getSocialStats(id, viewerId ? parseInt(viewerId) : undefined);
+  social(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.users.getSocialStats(id, req.user.userId);
   }
-
   @Get(':id/followers')
-  async getFollowers(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('viewerId') viewerId?: string
-  ) {
-    return this.usersService.getFollowList(id, 'followers', viewerId ? parseInt(viewerId) : undefined);
+  followers(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.users.getFollowList(id, 'followers', req.user.userId);
   }
-
   @Get(':id/following')
-  async getFollowing(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('viewerId') viewerId?: string
-  ) {
-    return this.usersService.getFollowList(id, 'following', viewerId ? parseInt(viewerId) : undefined);
+  following(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.users.getFollowList(id, 'following', req.user.userId);
   }
-
   @Post(':id/follow')
-  async followUser(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('followerId') followerId: number
-  ) {
-    return this.usersService.followUser(followerId, id);
+  follow(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.users.followUser(req.user.userId, id);
   }
-
   @Delete(':id/follow')
-  async unfollowUser(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('followerId', ParseIntPipe) followerId: number
-  ) {
-    return this.usersService.unfollowUser(followerId, id);
+  unfollow(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.users.unfollowUser(req.user.userId, id);
   }
-
   @Put(':id/preferences')
-  async updatePrefs(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() prefs: { theme: string; language: string }
-  ) {
-    return this.usersService.updatePreferences(id, prefs.theme, prefs.language);
+  async preferences(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest, @Body() dto: PreferencesDto) {
+    assertOwner(req.user, id);
+    return toSessionUser(await this.users.updatePreferences(id, dto.theme, dto.language));
   }
-
   @Get(':id')
-  async getUserProfile(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findPublicProfile(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
+  profile(@Param('id', ParseIntPipe) id: number) { return this.users.findPublicProfile(id); }
   @Put(':id/profile')
-  async updateProfile(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: any,
-    @Body() profileData: any
-  ) {
-    if (Number(req.user?.userId) !== Number(id) && req.user?.role !== 'admin') {
-      throw new ForbiddenException('No puedes editar este perfil');
-    }
-
-    return this.usersService.updateProfile(id, profileData);
+  async update(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest, @Body() dto: ProfileDto) {
+    assertOwner(req.user, id);
+    return toSessionUser(await this.users.updateProfile(id, dto));
   }
-
-  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async deleteAccount(@Param('id') id: string) {
-    try {
-      await this.usersService.deleteAccount(Number(id));
-      return { status: 'success', message: 'Cuenta eliminada permanentemente' };
-    } catch (error) {
-      throw new InternalServerErrorException('No se pudo eliminar la cuenta');
-    }
+  async deleteAccount(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    assertOwner(req.user, id);
+    await this.users.deleteAccount(id);
+    return { status: 'success' };
   }
 }

@@ -1,3 +1,4 @@
+import { selfieUrl } from '../../api/publicUrl';
 import { useRef, useState, useEffect } from 'react';
 import { Camera, X, Smartphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +17,8 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
   const { t } = useTranslation();
   const [mode, setMode] = useState<'options' | 'camera' | 'qr'>('options');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [sessionId] = useState(() => `lynkn_reverify_${Date.now()}`);
+  const [sessionId, setSessionId] = useState('');
+  const [senderToken, setSenderToken] = useState('');
   const [isReceiving, setIsReceiving] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -41,13 +43,20 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
   };
 
   useEffect(() => {
+    if (mode !== 'qr') return;
     const socket: Socket = io(SERVER_URL, {
       path: '/socket.io',
       transports: ['websocket'],
     });
 
     if (mode === 'qr') {
-      socket.emit('join-session', sessionId);
+      socket.on('connect', () => {
+        setSessionId(''); setSenderToken('');
+      socket.emit('create-selfie-session', (result: { status: string; sessionId: string; token: string }) => {
+          if (result.status === 'ok') { setSessionId(result.sessionId); setSenderToken(result.token); }
+          else toast.error(t('common.error'));
+        });
+      });
       socket.on('receive-selfie', (imageBase64: string) => {
         setIsReceiving(true);
         setCapturedImage(imageBase64);
@@ -59,26 +68,30 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
     return () => {
       socket.off('receive-selfie');
       socket.disconnect();
-      stopCamera();
     };
-  }, [mode, sessionId, SERVER_URL]);
+  }, [mode, SERVER_URL, t]);
 
-  const startCamera = async () => {
-    setMode('camera');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) { 
-      console.error("Error cámara:", err);
-      toast.error(t('reverify.cam_error'));
-      setMode('options');
-    }
-  };
+  useEffect(() => {
+    if (mode !== 'camera') return;
+    let disposed = false;
+    let currentStream: MediaStream | null = null;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then((stream) => {
+      if (disposed) { stream.getTracks().forEach((track) => track.stop()); return; }
+      currentStream = stream; streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    }).catch(() => {
+      if (!disposed) { toast.error(t('reverify.cam_error')); setMode('options'); }
+    });
+    const background = () => { if (document.hidden) setMode('options'); };
+    document.addEventListener('visibilitychange', background);
+    return () => {
+      disposed = true;
+      currentStream?.getTracks().forEach((track) => track.stop());
+      if (streamRef.current === currentStream) streamRef.current = null;
+      document.removeEventListener('visibilitychange', background);
+    };
+  }, [mode, t]);
+  const startCamera = () => setMode('camera');
 
   const takePhoto = () => {
     if (videoRef.current && canvasRef.current) {
@@ -139,12 +152,12 @@ const ReverifyModal = ({ onClose, onUpload }: ReverifyModalProps) => {
                   ) : (
                     <div className="qr-container">
                       <div className="qr-bg-wrapper">
-                         <QRCode 
-                            value={`${window.location.origin}/verify/${sessionId}`} 
-                            size={180} 
+                         {sessionId && senderToken && <QRCode
+                            value={selfieUrl(sessionId, senderToken)}
+                            size={180}
                             bgColor={isDarkMode ? "transparent" : "#ffffff"}
                             fgColor={isDarkMode ? "#00f2ff" : "#000000"}
-                         />
+                         />}
                       </div>
                       <p>{t('reverify.qr_desc')}</p>
                     </div>

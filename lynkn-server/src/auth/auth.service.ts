@@ -1,27 +1,27 @@
-import { Injectable, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, ForbiddenException, ConflictException, BadRequestException, HttpException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase.service';
+import { toSessionUser } from '../common/security';
+import { LoginDto, RegisterDto } from '../common/dtos';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
   private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-  private supabase: SupabaseClient;
+  private get supabase() { return this.supabaseService.getClient(); }
 
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private readonly supabaseService: SupabaseService,
   ) {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY,
-    );
+
   }
 
   /* REGISTRO */
-  async register(userData: any) {
+  async register(userData: RegisterDto) {
     const { email, username, password, foto_perfil, selfie, birth_day, terms_accepted } = userData;
 
     if (!birth_day) {
@@ -33,6 +33,10 @@ export class AuthService {
     }
 
     const birthDate = new Date(birth_day);
+    if (!Number.isFinite(birthDate.getTime()) || birthDate > new Date()) {
+      throw new BadRequestException('ERR_BIRTH_REQUIRED');
+    }
+    if (Buffer.byteLength(password, 'utf8') > 72) throw new BadRequestException('ERR_PWD_LONG');
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -72,7 +76,7 @@ export class AuthService {
       terms_accepted_at: new Date().toISOString(),
       role: 'user',
       status_verif: selfie ? 'pending' : 'unverified',
-    } as any);
+    });
 
     const jwtPayload = {
       sub: newUser.id,
@@ -83,7 +87,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(jwtPayload),
-      user: newUser,
+      user: toSessionUser(newUser as unknown as Record<string, unknown>),
     };
   }
 
@@ -102,7 +106,7 @@ export class AuthService {
   }
 
   /* LOGIN MANUAL */
-  async login(loginData: any) {
+  async login(loginData: LoginDto) {
     const { identifier, password } = loginData;
 
     const user = await this.usersService.findByIdentifier(identifier);
@@ -125,7 +129,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(jwtPayload),
-      user,
+      user: toSessionUser(user),
     };
   }
 
@@ -155,6 +159,7 @@ export class AuthService {
         email_verified?: boolean;
         name?: string;
         picture?: string;
+        hd?: string;
       };
 
       if (!userInfo.email_verified || userInfo.email !== tokenInfo.email) {
@@ -163,7 +168,8 @@ export class AuthService {
 
       const { email, sub, name, picture } = userInfo;
 
-      let user = await this.usersService.findByEmail(email);
+      let user = await this.usersService.findByGoogleId(sub);
+      if (!user) user = await this.usersService.findByEmail(email);
 
       if (!user) {
         const username = await this.createUniqueGoogleUsername(name || email);
@@ -174,8 +180,15 @@ export class AuthService {
           foto_perfil: picture,
           role: 'user',
           status_verif: 'unverified',
-        } as any);
+        });
+      } else if (user.google_id && user.google_id !== sub) {
+        throw new ForbiddenException('ERR_ACCOUNT_LINK_REQUIRED');
       } else if (!user.google_id || (!user.foto_perfil && picture)) {
+        // Google can confirm current ownership of Gmail and Workspace mailboxes.
+        // An already linked Google subject remains valid regardless of email changes.
+        if (!user.google_id && !email.toLowerCase().endsWith('@gmail.com') && !userInfo.hd) {
+          throw new ForbiddenException('ERR_ACCOUNT_LINK_REQUIRED');
+        }
         user = await this.usersService.updateGoogleIdentity(user.id, {
           google_id: sub,
           foto_perfil: user.foto_perfil || picture,
@@ -191,9 +204,10 @@ export class AuthService {
 
       return {
         access_token: this.jwtService.sign(jwtPayload),
-        user,
+        user: toSessionUser(user),
       };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new ForbiddenException('ERR_GOOGLE_TOKEN_INVALID');
     }
   }
@@ -209,17 +223,15 @@ export class AuthService {
     }
 
     const authUser = data.user;
-    const email = authUser.email?.toLowerCase();
-    const phone = authUser.phone || authUser.user_metadata?.phone;
+    const email = authUser.email_confirmed_at ? authUser.email?.toLowerCase() : undefined;
+    const phone = authUser.phone_confirmed_at ? authUser.phone : undefined;
+    if (!email && !phone) throw new ForbiddenException('ERR_OTP_SESSION_INVALID');
 
     let user = await this.usersService.findBySupabaseAuthId(authUser.id);
 
-    if (!user && email) {
-      user = await this.usersService.findByEmail(email);
-    }
-
-    if (!user && phone) {
-      user = await this.usersService.findByPhone(phone);
+    if (!user && ((email && await this.usersService.findByEmail(email)) ||
+        (phone && await this.usersService.findByPhone(phone)))) {
+      throw new ConflictException('ERR_ACCOUNT_LINK_REQUIRED');
     }
 
     if (!user) {
@@ -232,7 +244,7 @@ export class AuthService {
         foto_perfil: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}`,
         role: 'user',
         status_verif: 'unverified',
-      } as any);
+      });
     } else if (!user.supabase_auth_id || (phone && !user.phone)) {
       user = await this.usersService.updatePasswordlessIdentity(user.id, {
         supabase_auth_id: authUser.id,
@@ -251,7 +263,7 @@ export class AuthService {
       .toLowerCase()
       .replace(/[^a-z0-9_]+/g, '_')
       .replace(/^_+|_+$/g, '')
-      .slice(0, 24) || 'google_user';
+      .slice(0, 20) || 'google_user';
 
     let username = baseUsername;
     let suffix = 1;
@@ -276,7 +288,7 @@ export class AuthService {
     return value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'phone_user';
   }
 
-  private createSessionResponse(user: any) {
+  private createSessionResponse(user: Record<string, unknown>) {
     const jwtPayload = {
       sub: user.id,
       email: user.email,
@@ -286,7 +298,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(jwtPayload),
-      user,
+      user: toSessionUser(user),
     };
   }
 }

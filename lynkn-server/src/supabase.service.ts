@@ -1,18 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Global, Injectable, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseService {
-  private supabase: SupabaseClient;
-
-  constructor() {
+  private readonly supabase: SupabaseClient;
+  constructor(config: ConfigService) {
     this.supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY
+      config.getOrThrow<string>('SUPABASE_URL'),
+      config.getOrThrow<string>('SUPABASE_KEY'),
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
     );
   }
-
-  getClient() {
-    return this.supabase;
-  }
+  getClient(): SupabaseClient { return this.supabase; }
 }
+
+@Global()
+@Module({ providers: [SupabaseService], exports: [SupabaseService] })
+export class SupabaseModule {}

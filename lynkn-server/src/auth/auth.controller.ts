@@ -1,116 +1,44 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Patch,
-  Body,
-  Param,
-  BadRequestException,
-  InternalServerErrorException,
-  Logger
-} from '@nestjs/common';
+import { Body, Controller, Get, UnauthorizedException, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
+import { AvailabilityDto, GoogleTokenDto, LoginDto, RegisterDto, ReverifyDto, SupabaseTokenDto, VerificationDto } from '../common/dtos';
+import { AuthenticatedRequest, toSessionUser } from '../common/security';
 
 @Controller('auth')
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name);
-
-  constructor(
-    private authService: AuthService,
-    private usersService: UsersService
-  ) { }
-
+  constructor(private readonly auth: AuthService, private readonly users: UsersService) {}
   @Post('google')
-  async googleLogin(@Body('token') token: string) {
-    return this.authService.validateGoogleUser(token);
-  }
-
+  googleLogin(@Body() dto: GoogleTokenDto) { return this.auth.validateGoogleUser(dto.token); }
   @Post('supabase-session')
-  async supabaseSessionLogin(@Body('accessToken') accessToken: string) {
-    return this.authService.exchangeSupabaseSession(accessToken);
-  }
-
+  supabaseLogin(@Body() dto: SupabaseTokenDto) { return this.auth.exchangeSupabaseSession(dto.accessToken); }
   @Post('register')
-  async register(@Body() userData: any) {
-    try {
-      if (!userData.email || !userData.password) {
-        throw new BadRequestException('Email y contraseña son obligatorios');
-      }
-      return await this.authService.register(userData);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      this.logger.error(`Error en Registro: ${errorMessage}`);
-      throw error;
-    }
-  }
-
+  register(@Body() dto: RegisterDto) { return this.auth.register(dto); }
   @Post('login')
-  async login(@Body() loginData: any) {
-    try {
-      return await this.authService.login(loginData);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      this.logger.error(`Error en Login: ${errorMessage}`);
-      throw error;
-    }
-  }
-
+  login(@Body() dto: LoginDto) { return this.auth.login(dto); }
   @Post('check-availability')
-  async checkAvailability(@Body() body: { email: string; username: string }) {
-    return await this.authService.checkAvailability(body.email, body.username);
+  availability(@Body() dto: AvailabilityDto) { return this.auth.checkAvailability(dto.email, dto.username); }
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@Req() req: AuthenticatedRequest) {
+    const user = await this.users.findOne(req.user.userId);
+    if (!user) throw new UnauthorizedException('Cuenta no disponible');
+    return toSessionUser(user);
   }
-
+  @UseGuards(JwtAuthGuard)
   @Post('reverify')
-  async reverify(@Body() data: { userId: number, imageBase64: string }) {
-    try {
-      await this.usersService.updateStatus(data.userId, 'pending', data.imageBase64);
-      
-      return {
-        status: 'ok',
-        message: 'Verificación enviada correctamente. Tu cuenta está ahora en revisión.'
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      this.logger.error(`Error en Reverify: ${errorMessage}`);
-      
-      throw new InternalServerErrorException('No se pudo procesar la reverificación');
-    }
+  async reverify(@Req() req: AuthenticatedRequest, @Body() dto: ReverifyDto) {
+    await this.users.updateStatus(req.user.userId, 'pending', dto.imageBase64);
+    return { status: 'ok' };
   }
-
-
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Get('admin/pending')
-  async getPendingUsers() {
-    try {
-      return await this.usersService.findPending();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      this.logger.error(`Error obteniendo pendientes: ${errorMessage}`);
-      throw new InternalServerErrorException('Error al obtener usuarios pendientes');
-    }
-  }
-
- @UseGuards(JwtAuthGuard, AdminGuard)
+  pending() { return this.users.findPending(); }
+  @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch('admin/verify/:id')
-  async verifyUser(
-    @Param('id') id: string,
-    @Body() body: { status: 'approved' | 'rejected', message?: string }
-  ) {
-    try {
-      await this.usersService.updateStatus(Number(id), body.status, undefined, body.message);
-      
-      return { 
-        status: 'success', 
-        message: `Usuario actualizado a ${body.status}${body.message ? ' con motivo' : ''}` 
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      this.logger.error(`Error verificando usuario ${id}: ${errorMessage}`);
-      throw new InternalServerErrorException('No se pudo actualizar el estado del usuario');
-    }
+  async verify(@Param('id', ParseIntPipe) id: number, @Body() dto: VerificationDto) {
+    await this.users.updateStatus(id, dto.status, undefined, dto.message);
+    return { status: 'success' };
   }
 }

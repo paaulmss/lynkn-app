@@ -6,7 +6,6 @@ export class AdminGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    console.log('DEBUG GUARD - Usuario en request:', user);
 
     // Si el usuario existe y es admin, le dejamos pasar
     if (user && user.role === 'admin') {

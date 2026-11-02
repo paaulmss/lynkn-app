@@ -1,16 +1,13 @@
+import { relationOne, toSessionUser } from '../common/security';
 import { Injectable } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase.service';
 
 @Injectable()
 export class AdminService {
-  private supabase: SupabaseClient;
+  private get supabase() { return this.supabaseService.getClient(); }
 
-  constructor() {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY
-    );
-  }
+  constructor(private readonly supabaseService: SupabaseService) {
+}
 
   // Obtener usuarios pendientes de aprobación
   async getPendingUsers() {
@@ -31,7 +28,7 @@ export class AdminService {
           .select('id, username, email, role, status_verif, foto_perfil, created_at'),
         this.supabase
           .from('posts')
-          .select('id, title, image_url, user_id, category, status, is_visible, moderation_status, current_particip, max_particip, event_date, created_at, users(username, foto_perfil)'),
+          .select('id, title, image_url, user_id, category, status, is_visible, moderation_status, current_particip, max_particip, event_date, users(username, foto_perfil)'),
         this.supabase
           .from('participations')
           .select('id, status, post_id, user_id'),
@@ -61,38 +58,38 @@ export class AdminService {
     const notifications = notificationsRes.data || [];
     const reports = reportsRes.data || [];
 
-    const userStatus = users.reduce((acc, user: any) => {
+    const userStatus = users.reduce((acc, user) => {
       const key = user.status_verif || 'unknown';
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const postVisibility = posts.reduce((acc, post: any) => {
+    const postVisibility = posts.reduce((acc, post) => {
       const key = post.is_visible === false ? 'hidden' : 'visible';
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const participationStatus = participations.reduce((acc, participation: any) => {
+    const participationStatus = participations.reduce((acc, participation) => {
       const key = participation.status || 'unknown';
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     const topPosts = [...posts]
-      .sort((a: any, b: any) => Number(b.current_particip || 0) - Number(a.current_particip || 0))
+      .sort((a, b) => Number(b.current_particip || 0) - Number(a.current_particip || 0))
       .slice(0, 5);
 
     const recentUsers = [...users]
-      .sort((a: any, b: any) => Number(b.id || 0) - Number(a.id || 0))
+      .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
       .slice(0, 6);
 
     const recentPosts = [...posts]
-      .sort((a: any, b: any) => Number(b.id || 0) - Number(a.id || 0))
+      .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
       .slice(0, 6);
 
     const recentActivity = [
-      ...users.map((user: any) => ({
+      ...users.map((user) => ({
         id: `user-${user.id}`,
         type: 'user',
         title: `@${user.username}`,
@@ -100,15 +97,15 @@ export class AdminService {
         created_at: user.created_at,
         numeric_id: user.id,
       })),
-      ...posts.map((post: any) => ({
+      ...posts.map((post) => ({
         id: `post-${post.id}`,
         type: 'post',
         title: post.title,
-        detail: `Post de @${post.users?.username || 'usuario'} (${post.is_visible === false ? 'oculto' : 'visible'})`,
-        created_at: post.created_at || post.event_date,
+        detail: `Post de @${relationOne(post.users)?.username || 'usuario'} (${post.is_visible === false ? 'oculto' : 'visible'})`,
+        created_at: post.event_date,
         numeric_id: post.id,
       })),
-      ...messages.map((message: any) => ({
+      ...messages.map((message) => ({
         id: `message-${message.id}`,
         type: 'message',
         title: `Chat del post #${message.post_id}`,
@@ -116,7 +113,7 @@ export class AdminService {
         created_at: message.sent_at,
         numeric_id: message.id,
       })),
-      ...notifications.map((notification: any) => ({
+      ...notifications.map((notification) => ({
         id: `notification-${notification.id}`,
         type: 'notification',
         title: notification.type || 'Notificación',
@@ -124,7 +121,7 @@ export class AdminService {
         created_at: notification.created_at,
         numeric_id: notification.id,
       })),
-      ...reports.map((report: any) => ({
+      ...reports.map((report) => ({
         id: `report-${report.id}`,
         type: 'report',
         title: `Reporte del post #${report.post_id}`,
@@ -144,10 +141,10 @@ export class AdminService {
     return {
       totals: {
         users: users.length,
-        admins: users.filter((user: any) => user.role === 'admin').length,
+        admins: users.filter((user) => user.role === 'admin').length,
         posts: posts.length,
-        visiblePosts: posts.filter((post: any) => post.is_visible !== false).length,
-        hiddenPosts: posts.filter((post: any) => post.is_visible === false).length,
+        visiblePosts: posts.filter((post) => post.is_visible !== false).length,
+        hiddenPosts: posts.filter((post) => post.is_visible === false).length,
         pendingVerifications: userStatus.pending || 0,
         approvedUsers: userStatus.approved || 0,
         rejectedUsers: userStatus.rejected || 0,
@@ -155,9 +152,9 @@ export class AdminService {
         acceptedParticipations: participationStatus.accepted || 0,
         pendingParticipations: participationStatus.pending || 0,
         messages: messages.length,
-        unreadNotifications: notifications.filter((notification: any) => !notification.is_read).length,
+        unreadNotifications: notifications.filter((notification) => !notification.is_read).length,
         reports: reports.length,
-        reportedPosts: new Set(reports.map((report: any) => report.post_id)).size,
+        reportedPosts: new Set(reports.map((report) => report.post_id)).size,
       },
       userStatus,
       postVisibility,
@@ -198,8 +195,8 @@ export class AdminService {
     if (error) throw error;
     if (!reports?.length) return [];
 
-    const postIds = Array.from(new Set(reports.map((report: any) => report.post_id).filter(Boolean)));
-    const reporterIds = Array.from(new Set(reports.map((report: any) => report.reporter_id).filter(Boolean)));
+    const postIds = Array.from(new Set(reports.map((report) => report.post_id).filter(Boolean)));
+    const reporterIds = Array.from(new Set(reports.map((report) => report.reporter_id).filter(Boolean)));
 
     const [postsRes, usersRes] = await Promise.all([
       postIds.length
@@ -219,10 +216,10 @@ export class AdminService {
     if (postsRes.error) throw postsRes.error;
     if (usersRes.error) throw usersRes.error;
 
-    const postsById = new Map((postsRes.data || []).map((post: any) => [post.id, post]));
-    const usersById = new Map((usersRes.data || []).map((user: any) => [user.id, user]));
+    const postsById = new Map((postsRes.data || []).map((post) => [post.id, post]));
+    const usersById = new Map((usersRes.data || []).map((user) => [user.id, user]));
 
-    return reports.map((report: any) => ({
+    return reports.map((report) => ({
       ...report,
       posts: postsById.get(report.post_id) || null,
       users: usersById.get(report.reporter_id) || null,
@@ -239,7 +236,7 @@ export class AdminService {
       .single();
 
     if (error) throw error;
-    return data;
+    return toSessionUser(data);
   }
 
   async updateUserRole(id: number, role: 'admin' | 'user') {
@@ -251,7 +248,7 @@ export class AdminService {
       .single();
 
     if (error) throw error;
-    return data;
+    return toSessionUser(data);
   }
 
   async updatePostVisibility(id: number, isVisible: boolean) {

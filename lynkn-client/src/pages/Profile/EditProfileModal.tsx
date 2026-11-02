@@ -1,3 +1,4 @@
+import type { User as SessionUser } from '../../types';
 import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChangeEvent, FormEvent } from "react"; 
@@ -6,13 +7,7 @@ import { toast } from "sonner";
 import api from "../../api/axiosConfig";
 import "./EditProfileModal.css";
 
-interface User {
-  id: string | number;
-  username: string;
-  bio?: string;
-  location?: string;
-  foto_perfil?: string;
-}
+type User = Pick<SessionUser, 'id' | 'username' | 'bio' | 'location' | 'foto_perfil'>;
 
 interface EditProfileModalProps {
   user: User;

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from '../../lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Post } from './Profile';
 

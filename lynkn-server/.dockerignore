@@ -1,0 +1,11 @@
+node_modules
+dist
+test
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.git
+src/seed.ts
+src/seed-profiles.ts
+npm-debug.log*

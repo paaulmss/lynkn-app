@@ -2,24 +2,24 @@ import * as faceapi from 'face-api.js';
 
 const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
 
-export const loadModels = async () => {
-  if (faceapi.nets.tinyFaceDetector.params) return;
-
-  try {
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-    ]);
-    console.log("Motores Biométricos cargados desde CDN Oficial");
-  } catch (error) {
-    console.error("Error al cargar modelos desde el CDN:", error);
-  }
+let modelsPromise: Promise<void> | null = null;
+export const loadModels = (): Promise<void> => {
+  if (modelsPromise) return modelsPromise;
+  modelsPromise = Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+  ]).then(() => undefined).catch((error: unknown) => {
+    modelsPromise = null;
+    throw error;
+  });
+  return modelsPromise;
 };
 
 /* Compara dos imágenes y calcula la distancia euclidiana */
 export const compareFaces = async (image1: string, image2: string): Promise<boolean> => {
   try {
+    await loadModels();
     const img1 = await faceapi.fetchImage(image1);
     const img2 = await faceapi.fetchImage(image2);
 

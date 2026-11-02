@@ -1,3 +1,4 @@
+import { selfieUrl } from '../../api/publicUrl';
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -18,7 +19,6 @@ import {
 import { toast } from "sonner";
 import api from "../../api/axiosConfig";
 import { API_BASE_URL } from "../../api/axiosConfig";
-import { loadModels, compareFaces } from "../../services/faceRecognition";
 import PublicPreferenceControls from "../../components/PublicPreferenceControls";
 import AppLogo from "../../components/AppLogo";
 import "./Register.css";
@@ -90,24 +90,17 @@ const Register = () => {
   };
 
   const pwdScore = calculatePasswordStrength(formData.password);
-  const [sessionId] = useState(() => `lynkn_verify_${Date.now()}`);
+  const [sessionId, setSessionId] = useState('');
+  const [senderToken, setSenderToken] = useState('');
   const [showCamera, setShowCamera] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [isReceiving, setIsReceiving] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const birthDateRef = useRef<HTMLInputElement>(null);
   const SERVER_URL = API_BASE_URL;
-
-  useEffect(() => {
-    loadModels()
-      .then(() => console.log("IA Preparada"))
-      .catch((err: Error) => {
-        console.error("Error modelos:", err);
-        setErrorMsg(t("register.errors.ai_error"));
-      });
-  }, [t]);
 
   useEffect(() => {
     if (!showQR) return;
@@ -116,7 +109,11 @@ const Register = () => {
       withCredentials: true,
     });
     socket.on("connect", () => {
-      socket.emit("join-session", sessionId);
+      setSessionId(''); setSenderToken('');
+      socket.emit('create-selfie-session', (result: { status: string; sessionId: string; token: string }) => {
+        if (result.status === 'ok') { setSessionId(result.sessionId); setSenderToken(result.token); }
+        else toast.error(t('common.error'));
+      });
     });
     socket.on("receive-selfie", (imageBase64: string) => {
       setIsReceiving(true);
@@ -128,9 +125,10 @@ const Register = () => {
     return () => {
       socket.disconnect();
     };
-  }, [showQR, sessionId, SERVER_URL]);
+  }, [showQR, SERVER_URL, t]);
 
   useEffect(() => {
+    let disposed = false;
     const validateAutomatically = async () => {
       if (previews.foto_perfil && previews.selfie) {
         setIsValidatingFace(true);
@@ -138,10 +136,14 @@ const Register = () => {
         setErrorMsg(null);
         try {
           await new Promise((resolve) => setTimeout(resolve, 1200));
+          if (disposed) return;
+          const { compareFaces } = await import('../../services/faceRecognition');
+          if (disposed) return;
           const isSamePerson = await compareFaces(
             previews.foto_perfil,
             previews.selfie,
           );
+          if (disposed) return;
           if (isSamePerson) {
             setFaceMatchStatus("success");
           } else {
@@ -149,6 +151,7 @@ const Register = () => {
             setErrorMsg(t("register.errors.ai_no_match"));
           }
         } catch (err) {
+          if (disposed) return;
           const error = err as Error;
           setFaceMatchStatus("error");
           setErrorMsg(
@@ -157,11 +160,12 @@ const Register = () => {
               : t("register.errors.ai_error"),
           );
         } finally {
-          setIsValidatingFace(false);
+          if (!disposed) setIsValidatingFace(false);
         }
       }
     };
-    validateAutomatically();
+    void validateAutomatically();
+    return () => { disposed = true; };
   }, [previews.foto_perfil, previews.selfie, t]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,20 +223,27 @@ const Register = () => {
     }
   };
 
-  const startCamera = async () => {
-    setShowCamera(true);
-    setShowQR(false);
-    setErrorMsg(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-      });
+  useEffect(() => {
+    if (!showCamera) return;
+    let disposed = false;
+    let currentStream: MediaStream | null = null;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then((stream) => {
+      if (disposed) { stream.getTracks().forEach((track) => track.stop()); return; }
+      currentStream = stream; streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch {
-      setErrorMsg(t("reverify.cam_error"));
-      setShowCamera(false);
-    }
-  };
+    }).catch(() => {
+      if (!disposed) { setErrorMsg(t('reverify.cam_error')); setShowCamera(false); }
+    });
+    const background = () => { if (document.hidden) setShowCamera(false); };
+    document.addEventListener('visibilitychange', background);
+    return () => {
+      disposed = true;
+      currentStream?.getTracks().forEach((track) => track.stop());
+      if (streamRef.current === currentStream) streamRef.current = null;
+      document.removeEventListener('visibilitychange', background);
+    };
+  }, [showCamera, t]);
+  const startCamera = () => { setShowCamera(true); setShowQR(false); setErrorMsg(null); };
 
   const takePhoto = () => {
     if (videoRef.current && canvasRef.current) {
@@ -253,6 +264,8 @@ const Register = () => {
   };
 
   const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream)
         .getTracks()
@@ -564,11 +577,11 @@ const Register = () => {
                           </div>
                         ) : (
                           <div className="qr-wrapper">
-                            <QRCode
-                              value={`${window.location.origin}/verify/${sessionId}`}
+                            {sessionId && senderToken && <QRCode
+                              value={selfieUrl(sessionId, senderToken)}
                               size={140}
                               fgColor="#000"
-                            />
+                            />}
                           </div>
                         )}
                         <button

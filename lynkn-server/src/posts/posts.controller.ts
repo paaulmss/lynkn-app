@@ -1,186 +1,71 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  UseInterceptors,
-  UploadedFile,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Delete,
-  InternalServerErrorException,
-  BadRequestException,
-  Query,
-} from "@nestjs/common";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { PostsService } from "./posts.service";
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { PostsService } from './posts.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedRequest, assertOwner } from '../common/security';
+import { CreatePostDto, ParticipationDto } from '../common/dtos';
 
-@Controller("posts")
+@Controller('posts')
+@UseGuards(JwtAuthGuard)
 export class PostsController {
-  private readonly genAI: GoogleGenerativeAI;
-  private readonly safetyModel: any;
-
-   constructor(private readonly postsService: PostsService) {
-  this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-  
-  this.safetyModel = this.genAI.getGenerativeModel(
-    { model: "gemini-2.5-flash" }
-  );
-}
-
+  constructor(private readonly posts: PostsService) {}
   @Post()
-@UseInterceptors(FileInterceptor('image'))
-async create(@UploadedFile() file: any, @Body() body: any) {
-  if (!file) throw new BadRequestException('La imagen es obligatoria');
-  
-  try {
-    const imageData = {
-      inlineData: {
-        data: file.buffer.toString("base64"),
-        mimeType: file.mimetype,
-      },
-    };
-
-    const prompt = `Analiza este título: "${body.title}" y esta descripción: "${body.description}". 
-                    También analiza la imagen adjunta. 
-                    Si el contenido es violento, sexual, promueve el odio o es ilegal, 
-                    responde ÚNICAMENTE con la palabra "RECHAZADO". 
-                    Si es seguro, responde "APROBADO".`;
-
-    const result = await this.safetyModel.generateContent([prompt, imageData]);
-    const response = await result.response;
-    const text = response.text().trim();
-
-    if (text.includes("RECHAZADO")) {
-      throw new BadRequestException("Contenido inapropiado detectado por la IA.");
-    }
-
-    return await this.postsService.createPost(file, body);
-    
-  } catch (error) {
-    if (error instanceof BadRequestException) throw error;
-    console.error("Error en creación:", error);
-    throw new InternalServerErrorException("Fallo al procesar la publicación");
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: 3 * 1024 * 1024, files: 1, fields: 12 } }))
+  create(@UploadedFile() file: Express.Multer.File, @Body() dto: CreatePostDto, @Req() req: AuthenticatedRequest) {
+    return this.posts.createPost(file, dto, req.user);
   }
-}
-
-  @Get("categories")
-  async getCategories() {
-    return this.postsService.findCategories();
-  }
-
+  @Get('categories')
+  categories() { return this.posts.findCategories(); }
   @Get()
-async getAll(@Query("exclude") excludeUserId?: string) {
-  const userId = excludeUserId ? parseInt(excludeUserId) : undefined;
-  return this.postsService.findAll(userId, userId);
-}
-
-  @Get("user/:userId")
-  async findByUser(
-    @Param("userId", ParseIntPipe) userId: number,
-    @Query("viewerId") viewerId?: string,
-  ) {
-    return this.postsService.findByUser(userId, viewerId ? parseInt(viewerId) : undefined);
+  all(@Req() req: AuthenticatedRequest, @Query('exclude') exclude?: string) {
+    return this.posts.findAll(exclude ? req.user.userId : undefined, req.user.userId);
   }
-
-  @Get("favorites/:userId")
-  async getFavoritePosts(@Param("userId", ParseIntPipe) userId: number) {
-    return this.postsService.getFavoritePosts(userId);
+  @Get('user/:userId')
+  byUser(@Param('userId', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.posts.findByUser(id, req.user.userId);
   }
-
-  @Get(":id/social")
-  async getPostSocial(
-    @Param("id", ParseIntPipe) id: number,
-    @Query("userId") userId?: string,
-  ) {
-    return this.postsService.getPostSocial(id, userId ? parseInt(userId) : undefined);
+  @Get('favorites/:userId')
+  favorites(@Param('userId', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    assertOwner(req.user, id);
+    return this.posts.getFavoritePosts(id);
   }
-
-  @Post(":id/favorite")
-  async addFavorite(
-    @Param("id", ParseIntPipe) id: number,
-    @Body("userId") userId: number,
-  ) {
-    return this.postsService.addFavorite(id, userId);
+  @Get(':id/social')
+  social(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.posts.getPostSocial(id, req.user.userId);
   }
-
-  @Delete(":id/favorite")
-  async removeFavorite(
-    @Param("id", ParseIntPipe) id: number,
-    @Query("userId", ParseIntPipe) userId: number,
-  ) {
-    return this.postsService.removeFavorite(id, userId);
+  @Post(':id/favorite')
+  favorite(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.posts.addFavorite(id, req.user.userId);
   }
-
-  @Get("user-requests/:userId")
-  async getUserRequests(@Param("userId", ParseIntPipe) userId: number) {
-    return this.postsService.getUserRequests(userId);
+  @Delete(':id/favorite')
+  unfavorite(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.posts.removeFavorite(id, req.user.userId);
   }
-
-  @Post(":id/join")
-  async joinPost(
-    @Param("id", ParseIntPipe) id: number,
-    @Body("userId") userId: number,
-  ) {
-    return await this.postsService.requestJoin(id, userId);
+  @Get('user-requests/:userId')
+  requests(@Param('userId', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    assertOwner(req.user, id);
+    return this.posts.getUserRequests(id);
   }
-
-  @Patch("participation/:id")
-  async updateStatus(
-    @Param("id", ParseIntPipe) id: number,
-    @Body("status") status: "accepted" | "rejected",
-  ) {
-    return await this.postsService.updateParticipationStatus(id, status);
+  @Post(':id/join')
+  join(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.posts.requestJoin(id, req.user.userId);
   }
-
-  @Delete("participation/:id")
-  async cancelParticipation(@Param("id", ParseIntPipe) id: number) {
-    return await this.postsService.deleteParticipation(id);
+  @Patch('participation/:id')
+  status(@Param('id', ParseIntPipe) id: number, @Body() dto: ParticipationDto, @Req() req: AuthenticatedRequest) {
+    return this.posts.updateParticipationStatus(id, dto.status, req.user);
   }
-
-  @Delete(":id")
-async removePost(
-  @Param("id", ParseIntPipe) id: number,
-  @Query("userId", ParseIntPipe) userId: number
-) {
-  return await this.postsService.deletePost(id, userId);
-}
-
-  @Get(":id/participants")
-  async getParticipants(@Param("id", ParseIntPipe) id: number) {
-    return this.postsService.getParticipants(id);
+  @Delete('participation/:id')
+  cancel(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.posts.deleteParticipation(id, req.user);
   }
-
-  
-
-  @Patch("participation-by-notif/:notifId")
-  async handleActionFromNotif(
-    @Param("notifId", ParseIntPipe) notifId: number,
-    @Body("status") status: "accepted" | "rejected",
-  ) {
-    const supabase = (this.postsService as any).supabase;
-    const { data: notif } = await supabase
-      .from("notifications")
-      .select("post_id, sender_id")
-      .eq("id", notifId)
-      .single();
-    if (!notif)
-      throw new InternalServerErrorException("Notificación no encontrada");
-
-    const { data: participation } = await supabase
-      .from("participations")
-      .select("id")
-      .eq("post_id", notif.post_id)
-      .eq("user_id", notif.sender_id)
-      .single();
-    if (!participation)
-      throw new InternalServerErrorException("Solicitud no encontrada");
-
-    return await this.postsService.updateParticipationStatus(
-      participation.id,
-      status,
-    );
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
+    return this.posts.deletePost(id, req.user.userId);
+  }
+  @Get(':id/participants')
+  participants(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) { return this.posts.getParticipants(id, req.user); }
+  @Patch('participation-by-notif/:notifId')
+  fromNotification(@Param('notifId', ParseIntPipe) id: number, @Body() dto: ParticipationDto, @Req() req: AuthenticatedRequest) {
+    return this.posts.handleNotificationAction(id, dto.status, req.user);
   }
 }

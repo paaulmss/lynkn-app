@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -11,6 +11,7 @@ import {
   EyeOff,
   FileText,
   MessageCircle,
+  LogOut,
   RefreshCw,
   ShieldCheck,
   UserPlus,
@@ -27,6 +28,7 @@ import { InputText } from "primereact/inputtext";
 import { TabPanel, TabView } from "primereact/tabview";
 import { Tag } from "primereact/tag";
 import api from "../../api/axiosConfig";
+import { useAuth } from "../../hooks/useAuth";
 import { categoryService, getCategoryLabel } from "../../services/categoryService";
 import type { EventCategory } from "../../types/category";
 import "primereact/resources/themes/lara-dark-cyan/theme.css";
@@ -204,6 +206,7 @@ const buildFallbackDashboard = (
 };
 
 const AdminPanel: React.FC = () => {
+  const { logout } = useAuth();
   const { t, i18n } = useTranslation();
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -216,8 +219,7 @@ const AdminPanel: React.FC = () => {
   const [verificationNotes, setVerificationNotes] = useState<Record<number, string>>({});
   const [rejectUser, setRejectUser] = useState<AdminUser | null>(null);
 
-  const loadDashboard = async () => {
-    setLoading(true);
+  const loadDashboard = useCallback(() => {
     const safeGet = async <T,>(url: string, fallback: T): Promise<T> => {
       try {
         const response = await api.get<T>(url);
@@ -228,13 +230,12 @@ const AdminPanel: React.FC = () => {
       }
     };
 
-    try {
-      const [dashboardData, usersData, postsData, reportsData] = await Promise.all([
+    return Promise.all([
         safeGet<DashboardData | null>("/admin/dashboard", null),
         safeGet<AdminUser[]>("/admin/users", []),
         safeGet<AdminPost[]>("/admin/posts", []),
         safeGet<AdminReport[]>("/admin/reports", []),
-      ]);
+      ]).then(async ([dashboardData, usersData, postsData, reportsData]) => {
 
       let pendingData = await safeGet<AdminUser[]>("/admin/pending", []);
       if (!pendingData.length) {
@@ -250,15 +251,13 @@ const AdminPanel: React.FC = () => {
       if (!dashboardData && !usersData.length && !postsData.length) {
         toast.error(t("admin_dashboard.toasts.load_error"));
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    }).finally(() => { setLoading(false); });
+  }, [t]);
 
   useEffect(() => {
     loadDashboard();
     categoryService.getCategories().then(setCategories);
-  }, []);
+  }, [loadDashboard]);
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.slug, category])), [categories]);
 
@@ -396,6 +395,13 @@ const AdminPanel: React.FC = () => {
           <strong>{dashboard?.totals.pendingVerifications || 0}</strong>
           <small>{t("admin_dashboard.pending_verifications_short")}</small>
         </div>
+        <Button
+          className="admin-logout"
+          icon={<LogOut size={18} aria-hidden="true" />}
+          label={t("sidebar.logout")}
+          outlined
+          onClick={logout}
+        />
       </aside>
 
       <section className="admin-workspace">

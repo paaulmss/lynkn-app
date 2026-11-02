@@ -28,40 +28,41 @@ const NotificationsPage = () => {
   
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
+  const userId = user?.id;
   const isDarkMode = localStorage.getItem("theme") !== "light";
 
   const markAllAsRead = useCallback(async () => {
+    if (!userId) return;
     try {
-      if (!user?.id) return;
-      await api.patch(`/notifications/user/${user.id}/mark-read`);
+      await api.patch(`/notifications/user/${userId}/mark-read`);
     } catch (err) {
       console.error("Error al marcar como leídas:", err);
     }
-  }, [user?.id]);
+  }, [userId]);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      if (!user?.id) return;
-      const response = await api.get(`/notifications/user/${user.id}`);
-      const data = response.data;
-      setNotifications(data || []);
-      if (data && data.length > 0) {
-        markAllAsRead();
-      }
-    } catch (error) {
-      console.error("Error cargando notificaciones:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, markAllAsRead]);
+  const fetchNotifications = useCallback((signal?: AbortSignal) => {
+    if (!userId) return Promise.resolve();
+    return api.get<Notification[]>('/notifications/user/' + userId, { signal })
+      .then(({ data }) => {
+        if (signal?.aborted) return;
+        setNotifications(data || []);
+        setLoadError(false);
+        if (data.length) void markAllAsRead();
+      }).catch((error: unknown) => {
+        if (!signal?.aborted) { setLoadError(true); console.error('Error cargando notificaciones', error); }
+      }).finally(() => { if (!signal?.aborted) setLoading(false); });
+  }, [userId, markAllAsRead]);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchNotifications();
+    if (userId) {
+      const controller = new AbortController();
+      void fetchNotifications(controller.signal);
+      return () => controller.abort();
     }
-  }, [user?.id, fetchNotifications]);
+  }, [userId, fetchNotifications]);
 
   return (
     <div className={`explore-container ${!isDarkMode ? 'light-mode' : ''}`}>
@@ -88,7 +89,7 @@ const NotificationsPage = () => {
           </header>
 
           <div className="notifications-container">
-            {loading ? (
+            {loadError ? (<div role="alert">{t("common.error")}</div>) : loading ? (
               <div className="loading-state">
                 <div className="loader-dots">{t('notifications.loading')}</div>
               </div>

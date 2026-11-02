@@ -43,6 +43,7 @@ const MyRequestsPage = () => {
   const { t } = useTranslation();
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   
   // Nuevo estado para el modal personalizado
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
@@ -50,23 +51,21 @@ const MyRequestsPage = () => {
     requestId: null
   });
 
+  const userId = user?.id;
   const isDarkMode = localStorage.getItem("theme") !== "light";
 
-  const fetchRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      if (!user?.id) return;
-      const response = await api.get(`/posts/user-requests/${user.id}`);
-      setRequests(response.data);
-    } catch (error) {
-      console.error("Error al cargar solicitudes:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
+  const fetchRequests = useCallback((signal?: AbortSignal) => {
+    if (!userId) return Promise.resolve();
+    return api.get<RequestItem[]>('/posts/user-requests/' + userId, { signal })
+      .then(({ data }) => { if (!signal?.aborted) { setRequests(data); setLoadError(false); } })
+      .catch((error: unknown) => { if (!signal?.aborted) { setLoadError(true); console.error('Error cargando solicitudes', error); } })
+      .finally(() => { if (!signal?.aborted) setLoading(false); });
+  }, [userId]);
 
   useEffect(() => {
-    fetchRequests();
+    const controller = new AbortController();
+    void fetchRequests(controller.signal);
+    return () => controller.abort();
   }, [fetchRequests]);
 
   // Función para abrir el modal en lugar del confirm()
@@ -113,7 +112,7 @@ const MyRequestsPage = () => {
             <p>{t('requests.subtitle')}</p>
           </header>
 
-          {loading ? (
+          {loadError ? (<div role="alert">{t("common.error")}</div>) : loading ? (
             <div className="requests-loading">
               <Loader2 className="spin" size={40} color="var(--neon-glow)" />
             </div>

@@ -1,7 +1,7 @@
 /* ==========================================================================
     CONTENEDOR PRINCIPAL DEL HEADER
    ========================================================================== */
-.profile-header {
+.profile-header-component {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -14,13 +14,13 @@
 /* ==========================================================================
     SECCION DEL AVATAR (IZQUIERDA)
    ========================================================================== */
-.avatar-section {
+.profile-header-component .avatar-section {
   flex: 0 0 auto;
   display: flex;
   justify-content: center;
 }
 
-.avatar-wrapper {
+.profile-header-component .avatar-wrapper {
   width: clamp(112px, 16vw, 150px);
   height: clamp(112px, 16vw, 150px);
   border-radius: 50%;
@@ -32,7 +32,7 @@
   justify-content: center;
 }
 
-.avatar-wrapper img {
+.profile-header-component .avatar-wrapper img {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -44,21 +44,21 @@
 /* ==========================================================================
     SECCION DE INFORMACION (DERECHA)
    ========================================================================== */
-.info-section {
+.profile-header-component .info-section {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.username-row {
+.profile-header-component .username-row {
   display: flex;
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
 }
 
-.username-row h1 {
+.profile-header-component .username-row h1 {
   font-size: clamp(1.4rem, 3vw, 2rem);
   font-weight: 300;
   color: var(--text-main);
@@ -66,7 +66,7 @@
 }
 
 /* Botón Editar Perfil */
-.edit-profile-action-btn {
+.profile-header-component .edit-profile-action-btn {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   color: var(--text-main);
@@ -78,19 +78,19 @@
   transition: all 0.2s ease;
 }
 
-.edit-profile-action-btn:hover {
+.profile-header-component .edit-profile-action-btn:hover {
   background: var(--bg-input);
   border-color: var(--text-muted);
 }
 
-.action-buttons {
+.profile-header-component .action-buttons {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.follow-action-btn {
+.profile-header-component .follow-action-btn {
   min-height: 34px;
   padding: 0 18px;
   border-radius: 8px;
@@ -104,33 +104,33 @@
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
-.follow-action-btn.following {
+.profile-header-component .follow-action-btn.following {
   background: var(--bg-surface);
   color: var(--text-main);
   border-color: var(--border);
 }
 
-.follow-action-btn:hover {
+.profile-header-component .follow-action-btn:hover {
   transform: translateY(-1px);
 }
 
-.stats-row {
+.profile-header-component .stats-row {
   display: flex;
   gap: 40px;
   flex-wrap: wrap;
 }
 
-.stats-row span {
+.profile-header-component .stats-row span {
   font-size: 1rem;
   color: var(--text-main);
 }
 
-.stats-row strong {
+.profile-header-component .stats-row strong {
   color: var(--text-main);
   font-weight: 700;
 }
 
-.stat-button {
+.profile-header-component .stat-button {
   appearance: none;
   border: none;
   background: transparent;
@@ -140,24 +140,24 @@
   cursor: pointer;
 }
 
-.stat-button:hover {
+.profile-header-component .stat-button:hover {
   color: var(--accent-social);
 }
 
-.bio-row {
+.profile-header-component .bio-row {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.bio-row .name {
+.profile-header-component .bio-row .display-name {
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--text-main);
   margin-bottom: 2px;
 }
 
-.bio-row p {
+.profile-header-component .bio-row p {
   font-size: 0.95rem;
   color: var(--text-main);
   margin: 0;
@@ -165,7 +165,7 @@
   white-space: pre-wrap;
 }
 
-.bio-row .location {
+.profile-header-component .bio-row .location-tag {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -207,11 +207,11 @@
 /* ==========================================================================
     VERIFICACION Y BOTONES DE ACCION
    ========================================================================== */
-.verification-status-row {
+.profile-header-component .verification-status-row {
   margin: 5px 0 5px 0;
 }
 
-.verif-badge {
+.profile-header-component .verif-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -223,11 +223,11 @@
   text-transform: uppercase;
 }
 
-.verif-badge.approved { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-.verif-badge.pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.verif-badge.rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.profile-header-component .verif-badge.approved { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.profile-header-component .verif-badge.pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.profile-header-component .verif-badge.rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
 
-.reverify-action-btn {
+.profile-header-component .reverify-action-btn {
   background: var(--text-main);
   color: var(--bg-dark);
   border: none;
@@ -243,7 +243,7 @@
   transition: all 0.2s ease;
 }
 
-.reverify-action-btn:hover {
+.profile-header-component .reverify-action-btn:hover {
   opacity: 0.85;
   transform: translateY(-1px);
 }
@@ -252,7 +252,7 @@
     RESPONSIVE (MOVIL)
    ========================================================================== */
 @media (max-width: 768px) {
-  .profile-header {
+  .profile-header-component {
     flex-direction: column;
     align-items: center;
     text-align: center;
@@ -260,22 +260,26 @@
     margin-bottom: 26px;
   }
 
-  .avatar-wrapper {
+  .profile-header-component .avatar-wrapper {
     width: 120px;
     height: 120px;
   }
 
-  .username-row {
+  .profile-header-component .username-row {
     justify-content: center;
   }
 
-  .stats-row {
+  .profile-header-component .stats-row {
     justify-content: center;
     gap: 20px;
     width: 100%;
   }
 
-  .bio-row .location {
+  .profile-header-component .bio-row .location-tag {
     justify-content: center;
   }
 }
+
+.profile-header-component .info-section { min-width: 0; }
+.profile-header-component .profile-username, .profile-header-component .bio-text { overflow-wrap: anywhere; }
+.profile-header-component .username-row, .profile-header-component .stats-row { margin-bottom: 0; }

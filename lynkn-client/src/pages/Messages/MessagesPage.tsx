@@ -3,33 +3,18 @@ import { useTranslation } from "react-i18next";
 import "./MessagesPage.css";
 import { chatService, type ServerMessage } from "../../services/chatService";
 import { useAuth } from "../../hooks/useAuth";
-import { supabase } from "../../api/supabaseClient";
+import api from "../../api/axiosConfig";
+import { toast } from "sonner";
 
 import Sidebar from "../../components/Sidebar";
 import CreatePostModal from "../../components/posts/CreatePostModal";
 import { Menu, Send, Loader2 } from "lucide-react";
 
+interface HistoryPage { messages: ServerMessage[]; participants: string[]; hasMore: boolean; nextCursor: number | null; }
 interface EventParticipation {
   id: number;
   title: string;
   max_particip: number;
-}
-
-interface ParticipantData {
-  users: {
-    username: string;
-  } | null;
-}
-
-interface SupabaseResponse {
-  post_id: number;
-  posts: {
-    id: number;
-    title: string;
-    is_chat_active: boolean;
-    user_id: number;
-    max_particip: number;
-  } | null;
 }
 
 const MessagesPage = () => {
@@ -56,186 +41,124 @@ const MessagesPage = () => {
     }
   }, [messages]);
 
-  useEffect(() => {
-    const fetchMyEvents = async () => {
-      if (!user?.id) return;
-      setIsLoadingEvents(true);
-
-      const { data: participations, error: pError } = await supabase
-        .from("participations")
-        .select(
-          `post_id, posts ( id, title, is_chat_active, user_id, max_particip )`,
-        )
-        .eq("user_id", user.id)
-        .eq("status", "accepted");
-
-      const { data: ownedPosts, error: oError } = await supabase
-        .from("posts")
-        .select(`id, title, is_chat_active, user_id, max_particip`)
-        .eq("user_id", user.id);
-
-      if (pError || oError) {
-        console.error("Error cargando chats");
-        setIsLoadingEvents(false);
-        return;
-      }
-
-      const formattedParticipations = (
-        (participations as unknown as SupabaseResponse[]) || []
-      )
-        .filter((p) => p.posts !== null)
-        .map((p) => ({
-          id: p.posts!.id,
-          title: p.posts!.title,
-          max_particip: p.posts!.max_particip,
-        }));
-
-      const formattedOwned = (ownedPosts || []).map((p) => ({
-        id: p.id,
-        title: p.title,
-        max_particip: p.max_particip,
-      }));
-
-      const combined = [...formattedParticipations, ...formattedOwned];
-      const uniqueEvents = Array.from(
-        new Map(combined.map((item) => [item.id, item])).values(),
-      );
-
-      setMyEvents(uniqueEvents);
-      setIsLoadingEvents(false);
-    };
-
-    fetchMyEvents();
-  }, [user]);
+  const [eventsError, setEventsError] = useState(false);
+  const [chatError, setChatError] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const activePostRef = useRef(activePostId);
+  useEffect(() => { activePostRef.current = activePostId; }, [activePostId]);
+  const messageBufferRef = useRef(new Map<number, ServerMessage>());
+  const olderCursorRef = useRef<number | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
-
-    const reloadMyEvents = async () => {
-      const { data: participations, error: pError } = await supabase
-        .from("participations")
-        .select(
-          `post_id, posts ( id, title, is_chat_active, user_id, max_particip )`,
-        )
-        .eq("user_id", user.id)
-        .eq("status", "accepted");
-
-      const { data: ownedPosts, error: oError } = await supabase
-        .from("posts")
-        .select(`id, title, is_chat_active, user_id, max_particip`)
-        .eq("user_id", user.id);
-
-      if (pError || oError) return;
-
-      const formattedParticipations = (
-        (participations as unknown as SupabaseResponse[]) || []
-      )
-        .filter((p) => p.posts !== null)
-        .map((p) => ({
-          id: p.posts!.id,
-          title: p.posts!.title,
-          max_particip: p.posts!.max_particip,
-        }));
-
-      const formattedOwned = (ownedPosts || []).map((p) => ({
-        id: p.id,
-        title: p.title,
-        max_particip: p.max_particip,
-      }));
-
-      setMyEvents(Array.from(
-        new Map([...formattedParticipations, ...formattedOwned].map((item) => [item.id, item])).values(),
-      ));
+    let disposed = false;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const response = await api.get<EventParticipation[]>('/chats', { signal: controller.signal });
+        if (!disposed) {
+          setMyEvents(response.data);
+          setEventsError(false);
+          setActivePostId((current) => current && !response.data.some((event) => event.id === current) ? null : current);
+        }
+      } catch {
+        if (!disposed) setEventsError(true);
+      } finally {
+        if (!disposed) setIsLoadingEvents(false);
+      }
     };
-
-    const channel = supabase
-      .channel(`accepted_chat_updates_${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "participations",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          reloadMyEvents();
-        },
-      )
-      .subscribe();
-
+    void load();
+    const timer = window.setInterval(() => { void load(); }, 30000);
+    const onFocus = () => { void load(); };
+    window.addEventListener('focus', onFocus);
     return () => {
-      supabase.removeChannel(channel);
+      disposed = true; controller.abort(); window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
     };
-  }, [user]);
-
-  useEffect(() => {
-    const loadChatData = async () => {
-      if (!activePostId) {
-        setMessages([]);
-        setActiveParticipants([]);
-        return;
-      }
-
-      const { data: msgData } = await supabase
-        .from("messages")
-        .select("*, users(username, foto_perfil)")
-        .eq("post_id", activePostId)
-        .order("sent_at", { ascending: true });
-
-      if (msgData) setMessages(msgData);
-
-      const { data: partData } = (await supabase
-        .from("participations")
-        .select(`users ( username )`)
-        .eq("post_id", activePostId)
-        .eq("status", "accepted")) as unknown as {
-        data: ParticipantData[] | null;
-      };
-
-      if (partData) {
-        const names = partData
-          .map((p) => p.users?.username)
-          .filter((name): name is string => Boolean(name));
-        setActiveParticipants(names);
-      }
-    };
-
-    loadChatData();
-  }, [activePostId]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!activePostId || !user?.id) return;
-
-    chatService.connect();
-    chatService.joinPostChat(activePostId, Number(user.id));
-    chatService.onNewMessage((msg) => {
-      if (msg.post_id === activePostId) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    });
-    return () => {
-      chatService.offNewMessage();
-      chatService.disconnect();
+    let disposed = false;
+    const controller = new AbortController();
+    const buffer = new Map<number, ServerMessage>();
+    messageBufferRef.current = buffer;
+    olderCursorRef.current = null;
+    const publish = () => {
+      if (!disposed) setMessages([...buffer.values()].sort((a, b) =>
+        a.id - b.id));
     };
+    chatService.connect();
+    const unsubscribe = chatService.onNewMessage((message) => {
+      if (!disposed && message.post_id === activePostId) { buffer.set(message.id, message); publish(); }
+    });
+    chatService.joinPostChat(activePostId);
+    const loadHistory = () => api.get<HistoryPage>(
+      '/chats/' + activePostId + '/messages', { signal: controller.signal },
+    ).then(({ data }) => {
+      if (disposed) return;
+      data.messages.forEach((message) => buffer.set(message.id, message));
+      publish(); setActiveParticipants(data.participants); setChatError(false);
+      const currentCursor = olderCursorRef.current;
+      if (currentCursor === null || (data.nextCursor !== null && data.nextCursor < currentCursor)) {
+        olderCursorRef.current = data.nextCursor;
+        setHasMore(data.hasMore);
+      }
+    }).catch(() => { if (!disposed) setChatError(true); })
+      .finally(() => { if (!disposed) setIsLoadingChat(false); });
+    const offReady = chatService.onReady(({ postId }) => {
+      if (postId === activePostId) void loadHistory();
+    });
+    void loadHistory();
+    return () => { disposed = true; controller.abort(); offReady(); unsubscribe(); chatService.disconnect(); };
   }, [activePostId, user?.id]);
 
+  const loadOlder = async () => {
+    const postId = activePostId;
+    const before = olderCursorRef.current;
+    if (!postId || before === null || isLoadingOlder) return;
+    setIsLoadingOlder(true);
+    try {
+      const { data } = await api.get<HistoryPage>('/chats/' + postId + '/messages', { params: { before } });
+      if (activePostRef.current !== postId) return;
+      data.messages.forEach((message) => messageBufferRef.current.set(message.id, message));
+      setMessages([...messageBufferRef.current.values()].sort((a, b) => a.id - b.id));
+      olderCursorRef.current = data.nextCursor;
+      setHasMore(data.hasMore);
+    } catch { toast.error(t('common.error')); }
+    finally { setIsLoadingOlder(false); }
+  };
+
   const handleSelectEvent = (event: EventParticipation) => {
+    if (event.id === activePostId) return;
+    activePostRef.current = event.id;
+    setMessages([]); setActiveParticipants([]); setChatError(false); setIsLoadingChat(true); setHasMore(false);
     setActivePostId(event.id);
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activePostId || !user) return;
-    const senderId = typeof user.id === "string" ? Number(user.id) : user.id;
-    chatService.sendMessage(activePostId, senderId, newMessage);
-    setNewMessage("");
+    if (!newMessage.trim() || !activePostId || !user || isSending) return;
+    const content = newMessage; const postId = activePostId;
+    setIsSending(true);
+    try {
+      const saved = await chatService.sendMessage(postId, content);
+      if (activePostRef.current === postId) {
+        messageBufferRef.current.set(saved.id, saved);
+        setMessages((previous) => previous.some((message) => message.id === saved.id) ? previous : [...previous, saved]);
+        setNewMessage((current) => current === content ? '' : current);
+      }
+    } catch { toast.error(t('messages.socket_error')); }
+    finally { setIsSending(false); }
   };
 
   const activeEvent = myEvents.find((e) => e.id === activePostId);
 
   return (
-    <div className={`explore-container ${!isDarkMode ? "light-mode" : ""}`}>
+    <div className={`explore-container messages-view ${!isDarkMode ? "light-mode" : ""}`}>
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -263,7 +186,7 @@ const MessagesPage = () => {
               <h2>{t("messages.sidebar_title")}</h2>
             </header>
             <div className="events-list">
-              {isLoadingEvents ? (
+              {eventsError ? (<div role="alert">{t("common.error")}</div>) : isLoadingEvents ? (
                 <div className="loader-container">
                   <Loader2 className="spin" color="var(--text-main)" />
                   <small style={{ marginTop: "10px" }}>
@@ -310,6 +233,12 @@ const MessagesPage = () => {
                   </header>
 
                   <div className="messages-list" ref={scrollRef}>
+                    {hasMore && <button type="button" onClick={() => void loadOlder()} disabled={isLoadingOlder}>
+                      {isLoadingOlder ? 'Cargando...' : 'Cargar mensajes anteriores'}
+                    </button>}
+                    {isLoadingChat && <Loader2 className="spin" />}
+                    {chatError && <p role="alert">{t("common.error")}</p>}
+                    {!isLoadingChat && !chatError && messages.length === 0 && <p>{t("messages.empty_chat", { defaultValue: "Todavia no hay mensajes." })}</p>}
                     {messages.map((m) =>
                       m.type === "system" ? (
                         <div key={m.id} className="system-msg-wrapper">
@@ -354,11 +283,12 @@ const MessagesPage = () => {
                     onSubmit={handleSendMessage}
                   >
                     <input
+                      maxLength={4000}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder={t("messages.input_placeholder")}
                     />
-                    <button type="submit" disabled={!newMessage.trim()}>
+                    <button type="submit" disabled={!newMessage.trim() || isSending || isLoadingChat || chatError}>
                       <Send size={20} />
                     </button>
                   </form>

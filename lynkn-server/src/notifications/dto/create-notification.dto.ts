@@ -1,7 +1,9 @@
+import { IsBoolean, IsIn, IsInt, IsOptional, Min } from 'class-validator';
 export class CreateNotificationDto {
-  user_id: number;    // ID del que recibe la notificación
-  sender_id: number;  // ID del que realiza la acción
-  post_id: number;    // ID del post relacionado
-  type: 'join_request' | 'accepted' | 'rejected' | 'info_pending';
-  is_read?: boolean;  
+  @IsInt() @Min(1) user_id!: number;
+  @IsInt() @Min(1) sender_id!: number;
+  @IsInt() @Min(1) post_id!: number;
+  @IsIn(['join_request', 'accepted', 'rejected', 'info_pending'])
+  type!: 'join_request' | 'accepted' | 'rejected' | 'info_pending';
+  @IsOptional() @IsBoolean() is_read?: boolean;
 }

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>NSCameraUsageDescription</key>
+  <string>LYNKN utiliza la camara para capturar tu foto de verificacion.</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>LYNKN utiliza tu ubicacion para mostrar eventos cercanos cuando lo solicitas.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

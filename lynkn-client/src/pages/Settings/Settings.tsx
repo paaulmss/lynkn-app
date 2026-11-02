@@ -80,7 +80,7 @@ const Settings = () => {
         onNewPostClick={() => setIsCreatePostOpen(true)}
       />
 
-      <main className={`main-content ${isSidebarOpen ? "sidebar-active" : ""}`}>
+      <main className={`main-content settings-main ${isSidebarOpen ? "sidebar-active" : ""}`}>
         <header className="top-navbar">
           <button
             className="icon-btn menu-trigger"

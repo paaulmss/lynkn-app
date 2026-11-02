@@ -1,3 +1,5 @@
+import type { Post } from '../../types';
+export type { Post } from '../../types';
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -27,24 +29,6 @@ import type { EventCategory } from "../../types/category";
 import api from "../../api/axiosConfig";
 import { useAuth } from "../../hooks/useAuth";
 
-export interface Post {
-  id: string;
-  user_id: number;
-  title: string;
-  description: string;
-  image_url?: string;
-  category: string;
-  lat: number;
-  lng: number;
-  likes?: number;
-  comments?: number;
-  favorite_count?: number;
-  is_favorited?: boolean;
-  created_at?: string;
-  max_particip?: number;
-  status?: string;
-  event_date?: string;
-}
 
 const Profile = () => {
   const { profileId } = useParams();
@@ -72,6 +56,8 @@ const Profile = () => {
   }>>([]);
   const [isFollowListLoading, setIsFollowListLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadVersion, setReloadVersion] = useState(0);
 
   const isDarkMode = localStorage.getItem("theme") !== "light";
   const viewedUserId = profileId || user?.id;
@@ -88,28 +74,22 @@ const Profile = () => {
   const getPostCategory = (slug?: string) => categories.find((category) => category.slug === slug);
 
   useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!viewedUserId || !user?.id) return;
-      setIsLoading(true);
-      try {
-        const [profileResponse, postsResponse, favoritesResponse, socialResponse] = await Promise.all([
-          isOwnProfile ? Promise.resolve({ data: user }) : api.get(`/users/${viewedUserId}`),
-          api.get(`/posts/user/${viewedUserId}`, { params: { viewerId: user.id } }),
-          isOwnProfile ? api.get(`/posts/favorites/${user.id}`) : Promise.resolve({ data: [] }),
-          api.get(`/users/${viewedUserId}/social`, { params: { viewerId: user.id } }),
-        ]);
-        setProfileUser(profileResponse.data);
-        setUserPosts(postsResponse.data);
-        setFavoritePosts(favoritesResponse.data);
-        setSocialStats(socialResponse.data);
-      } catch {
-        console.error("Error cargando perfil");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProfileData();
-  }, [isOwnProfile, user, user?.id, viewedUserId]);
+    if (!viewedUserId || !user?.id) return;
+    const controller = new AbortController();
+    const signal = controller.signal;
+    Promise.all([
+      isOwnProfile ? Promise.resolve({ data: user }) : api.get('/users/' + viewedUserId, { signal }),
+      api.get<Post[]>('/posts/user/' + viewedUserId, { signal }),
+      isOwnProfile ? api.get<Post[]>('/posts/favorites/' + user.id, { signal }) : Promise.resolve({ data: [] }),
+      api.get('/users/' + viewedUserId + '/social', { signal }),
+    ]).then(([profile, posts, favorites, social]) => {
+      if (signal.aborted) return;
+      setProfileUser(profile.data); setUserPosts(posts.data); setFavoritePosts(favorites.data);
+      setSocialStats(social.data); setLoadError(false);
+    }).catch(() => { if (!signal.aborted) setLoadError(true); })
+      .finally(() => { if (!signal.aborted) setIsLoading(false); });
+    return () => controller.abort();
+  }, [isOwnProfile, user, viewedUserId, reloadVersion]);
 
   const loadFollowList = async (type: "followers" | "following") => {
     if (!viewedUserId || !user?.id) return;
@@ -155,7 +135,16 @@ const Profile = () => {
     }
   };
 
-  if (!user || !profileUser)
+  if (loadError) return (
+    <div className="loading-full" role="alert">
+      <p>{t('common.error')}</p>
+      <button type="button" onClick={() => { setLoadError(false); setIsLoading(true); setReloadVersion((value) => value + 1); }}>
+        {t('common.retry', { defaultValue: 'Reintentar' })}
+      </button>
+    </div>
+  );
+
+  if (!user || !profileUser || Number(profileUser.id) !== Number(viewedUserId))
     return (
       <div className="loading-full">
         <Loader2 className="spin" color="var(--text-main)" />
@@ -165,7 +154,6 @@ const Profile = () => {
   const handlePhotoUpload = async (imageData: string) => {
     try {
       await api.post("/auth/reverify", {
-        userId: user.id,
         imageBase64: imageData,
       });
       setIsReverifyOpen(false);
@@ -384,6 +372,7 @@ const Profile = () => {
 
       {selectedPost && viewMode !== "map" && (
         <PostDetailModal
+          key={selectedPost.id}
           post={{
             ...selectedPost,
             id: Number(selectedPost.id),

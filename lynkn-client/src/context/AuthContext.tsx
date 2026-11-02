@@ -1,19 +1,8 @@
 import { createContext } from 'react';
 
 // --- INTERFACES ---
-export interface User {
-  id: string | number;
-  email: string;
-  username: string;
-  theme: 'light' | 'dark';
-  language: 'es' | 'en';
-  role: 'admin' | 'user';
-  status_verif: 'pending' | 'approved' | 'rejected' | 'unverified'; 
-  foto_perfil: string; 
-  bio?: string;
-  location?: string;
-  verif_message?: string;
-}
+import type { User } from '../types';
+export type { User } from '../types';
 
 export interface AuthContextType {
   user: User | null;

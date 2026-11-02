@@ -135,6 +135,12 @@ select {
 
 .main-content {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  flex: 1;
+  height: 100svh;
+  overflow-y: auto;
 }
 
 .top-navbar {

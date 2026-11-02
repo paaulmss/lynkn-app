@@ -1,7 +1,8 @@
+import type { Post as PostData } from '../../../types';
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from '../../../lib/maplibre';
 import {
   X,
   MapPin,
@@ -26,26 +27,6 @@ import { getCategoryLabel } from "../../../services/categoryService";
 import type { EventCategory } from "../../../types/category";
 import ParticipantsPanel, { type Participant } from "./ParticipantsPanel";
 
-interface PostData {
-  id: number;
-  user_id: number;
-  title: string;
-  description: string;
-  image_url: string;
-  category: string;
-  lat: number;
-  lng: number;
-  max_particip: number;
-  current_particip?: number;
-  favorite_count?: number;
-  is_favorited?: boolean;
-  event_date: string;
-  users?: {
-    username: string;
-    foto_perfil: string;
-  };
-  userStatus?: "available" | "pending" | "accepted" | "rejected";
-}
 
 interface PostDetailModalProps {
   post: PostData;
@@ -143,11 +124,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, category, onFav
     };
     if (post.id) fetchParticipants();
   }, [post.id, post.user_id]);
-
-  useEffect(() => {
-    setFavoriteCount(post.favorite_count || 0);
-    setIsFavorited(Boolean(post.is_favorited));
-  }, [post.favorite_count, post.is_favorited]);
 
   useEffect(() => {
     if (!user?.id || isOwner) return;

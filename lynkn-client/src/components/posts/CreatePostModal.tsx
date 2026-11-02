@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from '../../lib/maplibre';
 import "maplibre-gl/dist/maplibre-gl.css";
 import { toast } from "sonner";
 import {
@@ -21,7 +21,7 @@ import type { EventCategory } from "../../types/category";
 import "./CreatePostModal.css";
 
 interface ApiError {
-  response?: { data?: { message?: string } };
+  response?: { status?: number; data?: { message?: string } };
   message: string;
 }
 
@@ -55,7 +55,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
   }>({});
 
   const [location, setLocation] = useState({ lat: 40.4167, lng: -3.7037 });
-  const [isLocating, setIsLocating] = useState(false);
+  const [isLocating, setIsLocating] = useState(() => "geolocation" in navigator);
   const [searchQuery, setSearchQuery] = useState("");
   const [showMiniMap, setShowMiniMap] = useState(false);
 
@@ -71,33 +71,25 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
     categoryService.getCategories().then((data) => {
       if (isMounted) {
         setCategories(data);
-        if (!data.some((item) => item.slug === category)) {
-          setCategory(data[0]?.slug || "general");
-        }
+        setCategory((current) => data.some((item) => item.slug === current) ? current : data[0]?.slug || 'general');
       }
     });
     return () => { isMounted = false; };
   }, []);
 
-  // EFECTO 1: Geolocalización inicial y limpieza de memoria de imagen
   useEffect(() => {
-    if ("geolocation" in navigator) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setLocation(coords);
+    let disposed = false;
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        if (!disposed) {
+          setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
           setIsLocating(false);
-        },
-        () => setIsLocating(false)
-      );
+        }
+      }, () => { if (!disposed) setIsLocating(false); });
     }
-
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
-    // Añadimos preview para evitar el error de linting de limpieza
-  }, [preview]);
+    return () => { disposed = true; };
+  }, []);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   // EFECTO 2: Inicialización del Mapa (Se separa de la actualización de coordenadas)
   useEffect(() => {
@@ -229,7 +221,6 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       const formData = new FormData();
       formData.append("title", title.trim());
       formData.append("description", caption.trim());
-      formData.append("user_id", String(user?.id));
       formData.append("lat", String(location.lat));
       formData.append("lng", String(location.lng));
       formData.append("category", category);
@@ -249,7 +240,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
       }, 2200);
     } catch (error) {
       const err = error as ApiError;
-      const rawMessage = err.response?.data?.message || t("common.error");
+      const rawMessage = String(err.response?.data?.message || t("common.error"));
       const getCreatePostErrorDescription = (message: string) => {
         const normalized = message.toLowerCase();
         if (normalized.includes("imagen es obligatoria")) return t("create_post.errors.image_required");
@@ -269,7 +260,7 @@ const CreatePostModal = ({ onClose, onSuccess }: CreatePostProps) => {
 
       setErrors(newErrors);
 
-      toast.error(t("create_post.err_security"), {
+      toast.error(err.response?.status === 503 ? t("common.error") : t("create_post.err_security"), {
         id: TOAST_ID,
         description: getCreatePostErrorDescription(rawMessage),
       });

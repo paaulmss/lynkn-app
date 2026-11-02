@@ -1,19 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+const escapeEmailPattern = (value: string) => value.trim().replace(/[\\%_]/g, '\\$&');
+import { throwDatabaseError } from '../common/database-error';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import { SupabaseService } from '../supabase.service';
+import { ProfileDto } from '../common/dtos';
 import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
-  private supabase: SupabaseClient;
-  private readonly safetyModel?: any;
+  private get supabase() { return this.supabaseService.getClient(); }
+  private readonly safetyModel?: GenerativeModel;
 
-  constructor() {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY
-    );
-
+  constructor(private readonly supabaseService: SupabaseService) {
     if (process.env.GEMINI_API_KEY) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       this.safetyModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -21,11 +19,11 @@ export class UsersService {
   }
 
   // Buscar usuario por email
-  async findByEmail(email: string): Promise<any | null> {
+  async findByEmail(email: string): Promise<User | null> {
     const { data, error } = await this.supabase
       .from('users')
       .select('*')
-      .eq('email', email)
+      .ilike('email', escapeEmailPattern(email))
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -33,9 +31,7 @@ export class UsersService {
       throw error;
     }
 
-    if (data) {
-      console.log(`Usuario encontrado: ${data.email}, Rol: ${data.role}, Status: ${data.status_verif}`);
-    }
+
 
     return data;
   }
@@ -50,13 +46,13 @@ export class UsersService {
 
     if (error) {
       console.error('Error de Supabase al crear usuario:', error.message, 'Código:', error.code);
-      throw new InternalServerErrorException(error.message);
+      throwDatabaseError(error);
     }
     return data;
   }
 
   // Buscar por ID
-  async findOne(id: number): Promise<any | null> {
+  async findOne(id: number): Promise<User | null> {
     const { data, error } = await this.supabase
       .from('users')
       .select('*')
@@ -67,8 +63,8 @@ export class UsersService {
     return data;
   }
 
-  async updateStatus(id: number, status: string, selfieBase64?: string, adminMessage?: string): Promise<void> {
-    const updateData: any = {
+  async updateStatus(id: number, status: User["status_verif"], selfieBase64?: string, adminMessage?: string): Promise<void> {
+    const updateData: Partial<User> = {
       status_verif: status,
       verif_message: adminMessage
     };
@@ -99,12 +95,12 @@ export class UsersService {
   async findPublicProfile(userId: number) {
     const { data, error } = await this.supabase
       .from('users')
-      .select('id, username, email, foto_perfil, bio, location, status_verif, role')
+      .select('id, username, foto_perfil, bio, location, status_verif, role')
       .eq('id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') throw new InternalServerErrorException(error.message);
-    if (!data) throw new BadRequestException('Usuario no encontrado');
+    if (!data) throw new NotFoundException('Usuario no encontrado');
     return data;
   }
 
@@ -123,7 +119,7 @@ export class UsersService {
     return this.enrichUsersWithSocial(data || [], viewerId);
   }
 
-  private async enrichUsersWithSocial(users: any[], viewerId?: number) {
+  private async enrichUsersWithSocial<T extends { id: number }>(users: T[], viewerId?: number) {
     if (!users.length) return users;
 
     const userIds = users.map((user) => user.id);
@@ -142,7 +138,7 @@ export class UsersService {
             .select('following_id')
             .eq('follower_id', viewerId)
             .in('following_id', userIds)
-        : Promise.resolve({ data: [], error: null } as any),
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     if (followersRes.error) throw new InternalServerErrorException(followersRes.error.message);
@@ -153,15 +149,15 @@ export class UsersService {
     const followingMap = new Map<number, number>();
     const viewerFollowingSet = new Set<number>();
 
-    (followersRes.data || []).forEach((row: any) => {
+    (followersRes.data || []).forEach((row) => {
       followersMap.set(row.following_id, (followersMap.get(row.following_id) || 0) + 1);
     });
 
-    (followingRes.data || []).forEach((row: any) => {
+    (followingRes.data || []).forEach((row) => {
       followingMap.set(row.follower_id, (followingMap.get(row.follower_id) || 0) + 1);
     });
 
-    (viewerFollowingRes.data || []).forEach((row: any) => {
+    (viewerFollowingRes.data || []).forEach((row) => {
       viewerFollowingSet.add(row.following_id);
     });
 
@@ -190,7 +186,7 @@ export class UsersService {
             .eq('follower_id', viewerId)
             .eq('following_id', userId)
             .single()
-        : Promise.resolve({ data: null, error: null } as any),
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
     if (followersRes.error) throw new InternalServerErrorException(followersRes.error.message);
@@ -242,7 +238,7 @@ export class UsersService {
 
     if (error) throw new InternalServerErrorException(error.message);
 
-    const ids = Array.from(new Set((follows || []).map((row: any) => isFollowers ? row.follower_id : row.following_id)));
+    const ids = Array.from(new Set((follows || []).map((row) => isFollowers ? row.follower_id : row.following_id)));
     if (!ids.length) return [];
 
     const { data: users, error: usersError } = await this.supabase
@@ -264,29 +260,34 @@ export class UsersService {
     return data;
   }
 
-  async findByUsername(username: string) {
+  async findByUsername(username: string): Promise<User | null> {
     const { data, error } = await this.supabase
       .from('users')
       .select('*')
       .eq('username', username.toLowerCase())
       .single();
 
-    if (error && error.code !== 'PGRST116') return null;
+    if (error && error.code !== 'PGRST116') throw new InternalServerErrorException('No se pudo consultar el usuario');
     return data;
   }
 
-  async findByIdentifier(identifier: string) {
-    const { data, error } = await this.supabase
-      .from('users')
-      .select('*')
-      .or(`email.eq.${identifier},username.eq.${identifier.toLowerCase()}`)
-      .single();
-
-    if (error) return null;
+  async findByIdentifier(identifier: string): Promise<User | null> {
+    const query = this.supabase.from('users').select('*');
+    const { data, error } = await (identifier.includes('@')
+      ? query.ilike('email', escapeEmailPattern(identifier))
+      : query.eq('username', identifier.trim().toLowerCase())).maybeSingle();
+    if (error) throw new InternalServerErrorException('No se pudo consultar el usuario');
     return data;
   }
 
-  async findByPhone(phone: string): Promise<any | null> {
+  async findByGoogleId(googleId: string): Promise<User | null> {
+    const { data, error } = await this.supabase.from('users').select('*')
+      .eq('google_id', googleId).maybeSingle();
+    if (error) throw new InternalServerErrorException('No se pudo consultar la identidad Google');
+    return data;
+  }
+
+  async findByPhone(phone: string): Promise<User | null> {
     const { data, error } = await this.supabase
       .from('users')
       .select('*')
@@ -300,7 +301,7 @@ export class UsersService {
     return data;
   }
 
-  async findBySupabaseAuthId(authId: string): Promise<any | null> {
+  async findBySupabaseAuthId(authId: string): Promise<User | null> {
     const { data, error } = await this.supabase
       .from('users')
       .select('*')
@@ -314,7 +315,7 @@ export class UsersService {
     return data;
   }
 
-  async updateGoogleIdentity(userId: number, googleData: { google_id: string; foto_perfil?: string }) {
+  async updateGoogleIdentity(userId: number, googleData: { google_id: string; foto_perfil?: string }) : Promise<User> {
     const updateData: Record<string, string> = {
       google_id: googleData.google_id,
     };
@@ -334,7 +335,7 @@ export class UsersService {
     return data;
   }
 
-  async updatePasswordlessIdentity(userId: number, identityData: { supabase_auth_id: string; email?: string; phone?: string }) {
+  async updatePasswordlessIdentity(userId: number, identityData: { supabase_auth_id: string; email?: string; phone?: string }) : Promise<User> {
     const updateData: Record<string, string> = {
       supabase_auth_id: identityData.supabase_auth_id,
     };
@@ -353,7 +354,7 @@ export class UsersService {
     return data;
   }
 
-  async updateProfile(userId: number, updateData: any) {
+  async updateProfile(userId: number, updateData: ProfileDto) {
     const username = String(updateData.username || '').trim().toLowerCase();
     const bio = String(updateData.bio || '').trim();
     const location = String(updateData.location || '').trim();
@@ -452,25 +453,7 @@ ${combinedText}`;
 }
 
   async deleteAccount(userId: number): Promise<void> {
-  const { error: postError } = await this.supabase
-    .from('posts')
-    .delete()
-    .eq('user_id', userId);
-  if (postError) throw postError;
-
-  await this.supabase.from('messages').delete().eq('sender_id', userId);
-  await this.supabase.from('chats').delete().eq('user_id', userId);
-
-  await this.supabase.from('notifications').delete().eq('user_id', userId);
-
-  const { error: userError } = await this.supabase
-    .from('users')
-    .delete()
-    .eq('id', userId);
-
-  if (userError) {
-    console.error('Error al borrar usuario:', userError.message);
-    throw userError;
+    const { error } = await this.supabase.rpc('lynkn_delete_account', { p_user_id: userId });
+    if (error) throwDatabaseError(error);
   }
-}
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
@@ -17,20 +17,13 @@ const VerifyMobile: React.FC = () => {
 
   const SERVER_URL = API_BASE_URL;
 
-  const socket: Socket = useMemo(
-    () =>
-      io(SERVER_URL, {
-        transports: ["polling", "websocket"],
-        withCredentials: true,
-      }),
-    [SERVER_URL],
-  );
-
+  const socketRef = useRef<Socket | null>(null);
+  const senderToken = window.location.hash.slice(1);
   useEffect(() => {
-    if (sessionId) {
-      socket.emit("join-session", sessionId);
-    }
-  }, [sessionId, socket]);
+    const socket = io(SERVER_URL, { transports: ['polling', 'websocket'], withCredentials: true });
+    socketRef.current = socket;
+    return () => { socket.disconnect(); socketRef.current = null; };
+  }, [SERVER_URL]);
 
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -52,14 +45,19 @@ const VerifyMobile: React.FC = () => {
 
           const compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
 
-          socket.emit(
+          const socket = socketRef.current;
+          if (!socket?.connected || !sessionId || !senderToken) {
+            toast.error(t('verify_mobile.err_sync')); setStatus('idle'); return;
+          }
+          socket.timeout(10000).emit(
             "send-selfie",
             {
               sessionId: sessionId,
+              token: senderToken,
               imageBase64: compressedBase64,
             },
-            (response: ServerResponse) => {
-              if (response?.status === "ok") {
+            (error: Error | null, response?: ServerResponse) => {
+              if (!error && response?.status === "ok") {
                 setStatus("success");
               } else {
                 toast.error(t("verify_mobile.err_sync"));
@@ -68,8 +66,11 @@ const VerifyMobile: React.FC = () => {
             },
           );
         };
+        img.onerror = () => { setStatus('idle'); toast.error(t('verify_mobile.err_sync')); };
         img.src = event.target?.result as string;
       };
+      reader.onerror = () => { setStatus('idle'); toast.error(t('verify_mobile.err_sync')); };
+      if (file.size > 10 * 1024 * 1024) { setStatus('idle'); toast.error(t('verify_mobile.err_sync')); return; }
       reader.readAsDataURL(file);
     }
   };

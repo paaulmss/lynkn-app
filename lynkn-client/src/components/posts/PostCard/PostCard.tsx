@@ -1,3 +1,4 @@
+import type { Post } from '../../../types';
 import React from "react";
 import { Heart, MessageCircle, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -6,20 +7,6 @@ import { getCategoryLabel } from "../../../services/categoryService";
 import type { EventCategory } from "../../../types/category";
 import "./PostCard.css";
 
-interface Post {
-  id: number | string;
-  user_id: number; 
-  title: string;
-  image_url?: string;
-  likes?: number;
-  comments?: number;
-  max_particip?: number;
-  current_particip?: number;
-  category?: string;
-  favorite_count?: number;
-  is_favorited?: boolean;
-  userStatus?: "available" | "pending" | "accepted" | "rejected";
-}
 
 interface PostCardProps {
   post: Post;

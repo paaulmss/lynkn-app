@@ -1,7 +1,8 @@
+import type { Post } from '../../types';
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from '../../lib/maplibre';
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Map as MapIcon, LayoutList, Menu, Search, Filter, X } from "lucide-react";
 
@@ -15,26 +16,6 @@ import { categoryService, getCategoryLabel } from "../../services/categoryServic
 import type { EventCategory } from "../../types/category";
 import "./Explore.css";
 
-interface Post {
-  id: number;
-  title: string;
-  description: string;
-  image_url: string;
-  lat: number;
-  lng: number;
-  category: string;
-  user_id: number;
-  max_particip?: number;
-  current_particip?: number;
-  favorite_count?: number;
-  is_favorited?: boolean;
-  event_date?: string;
-  users: {
-    username: string;
-    foto_perfil: string;
-  };
-  userStatus?: "available" | "pending" | "accepted" | "rejected";
-}
 
 interface UserRequest {
   id: number;
@@ -44,7 +25,7 @@ interface UserRequest {
 
 interface UserData {
   id: string | number;
-  email: string;
+  email?: string;
   username: string;
   role: "admin" | "user";
   status_verif: "pending" | "approved" | "rejected" | "unverified";
@@ -107,6 +88,8 @@ const Explore = () => {
   const [viewMode, setViewMode] = useState<"map" | "posts">("map");
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [postsError, setPostsError] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -147,7 +130,7 @@ const Explore = () => {
           getCategoryLabel(categoryMap.get(post.category), i18n.language),
           post.users?.username,
         ]
-          .filter(Boolean)
+          .filter((value): value is string => typeof value === "string")
           .some((value) => value.toLowerCase().includes(normalizedSearch));
 
       const matchesStatus =
@@ -175,6 +158,8 @@ const Explore = () => {
 
   const clearFilters = () => {
     setSearchQuery("");
+    setProfileResults([]);
+    setIsProfileSearchLoading(false);
     setStatusFilter("all");
     setCapacityFilter("all");
     setCategoryFilter("all");
@@ -183,25 +168,27 @@ const Explore = () => {
   useEffect(() => {
     const query = searchQuery.trim();
     if (!user?.id || query.length < 2) {
-      setProfileResults([]);
       return;
     }
 
+    const controller = new AbortController();
+    let disposed = false;
     const timer = window.setTimeout(async () => {
       setIsProfileSearchLoading(true);
       try {
         const response = await api.get<ProfileSearchResult[]>("/users/search", {
-          params: { q: query, viewerId: user.id },
+          params: { q: query }, signal: controller.signal,
         });
+        if (disposed) return;
         setProfileResults(response.data.filter((result) => Number(result.id) !== Number(user.id)));
       } catch (error) {
         console.error("Error buscando perfiles:", error);
       } finally {
-        setIsProfileSearchLoading(false);
+        if (!disposed) setIsProfileSearchLoading(false);
       }
     }, 260);
 
-    return () => window.clearTimeout(timer);
+    return () => { disposed = true; controller.abort(); window.clearTimeout(timer); };
   }, [searchQuery, user?.id]);
 
   const handleFollowFromSearch = async (profile: ProfileSearchResult) => {
@@ -264,28 +251,20 @@ const Explore = () => {
     }
   };
 
-  const fetchPostsAndStatus = useCallback(async () => {
+  const fetchPostsAndStatus = useCallback((signal?: AbortSignal) => {
     const currentUserId = user?.id;
-    if (!currentUserId) return;
-
-    try {
-      const [postsRes, requestsRes] = await Promise.all([
-        api.get<Post[]>(`/posts?exclude=${currentUserId}`),
-        api.get<UserRequest[]>(`/posts/user-requests/${currentUserId}`),
-      ]);
-
-      const enrichedPosts = postsRes.data.map((post) => {
-        const myRequest = requestsRes.data.find((r) => r.post_id === post.id);
-        return {
-          ...post,
-          userStatus: myRequest ? myRequest.status : ("available" as const),
-        };
-      });
-
-      setPosts(enrichedPosts);
-    } catch (error) {
-      console.error("Error al cargar datos enriquecidos:", error);
-    }
+    if (!currentUserId) return Promise.resolve();
+    return Promise.all([
+      api.get<Post[]>('/posts?exclude=' + currentUserId, { signal }),
+      api.get<UserRequest[]>('/posts/user-requests/' + currentUserId, { signal }),
+    ]).then(([postsResponse, requestsResponse]) => {
+      if (signal?.aborted) return;
+      setPosts(postsResponse.data.map((post) => ({
+        ...post, userStatus: requestsResponse.data.find((request) => request.post_id === post.id)?.status || 'available' as const,
+      })));
+      setPostsError(false);
+    }).catch(() => { if (!signal?.aborted) setPostsError(true); })
+      .finally(() => { if (!signal?.aborted) setPostsLoading(false); });
   }, [user]);
 
   useEffect(() => {
@@ -297,15 +276,10 @@ const Explore = () => {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    if (user?.id) {
-      const load = async () => {
-        if (isMounted) await fetchPostsAndStatus();
-      };
-      load();
-    }
-    return () => { isMounted = false; };
-  }, [fetchPostsAndStatus, user?.id]);
+    const controller = new AbortController();
+    void fetchPostsAndStatus(controller.signal);
+    return () => controller.abort();
+  }, [fetchPostsAndStatus]);
 
   useEffect(() => {
     if (viewMode !== "map" || !mapContainer.current) return;
@@ -373,7 +347,7 @@ const Explore = () => {
           ? escapeHtml(t(`post_card.status.${post.userStatus}`))
           : "";
 
-      const marker = new maplibregl.Marker(el)
+      const marker = new maplibregl.Marker({ element: el })
         .setLngLat([post.lng, post.lat])
         .setPopup(
           new maplibregl.Popup({
@@ -438,7 +412,7 @@ const Explore = () => {
         markerNode.innerHTML = '<span></span>';
 
         addressMarker.current?.remove();
-        addressMarker.current = new maplibregl.Marker(markerNode)
+        addressMarker.current = new maplibregl.Marker({ element: markerNode })
           .setLngLat([lng, lat])
           .addTo(map.current);
 
@@ -473,6 +447,8 @@ const Explore = () => {
       />
 
       <main className={`main-content explore-view ${isSidebarOpen ? "sidebar-active" : ""}`}>
+        {postsError && <div role="alert">{t("common.error")} <button type="button" onClick={() => void fetchPostsAndStatus()}>{t("common.retry", { defaultValue: "Reintentar" })}</button></div>}
+        {postsLoading && <div role="status">{t("common.loading", { defaultValue: "Cargando..." })}</div>}
         <header className="top-navbar">
           <button
             className="icon-btn menu-trigger"
@@ -636,7 +612,7 @@ const Explore = () => {
             <div ref={mapContainer} className="map-div" />
           ) : (
             <div className="explore-posts-grid">
-              {filteredPosts.length > 0 ? filteredPosts.map((post) => (
+              {postsLoading || postsError ? null : filteredPosts.length > 0 ? filteredPosts.map((post) => (
                 <PostCard
                   key={post.id}
                   post={post}
@@ -663,6 +639,7 @@ const Explore = () => {
 
       {selectedPost && (
         <PostDetailModal
+          key={selectedPost.id}
           post={{
             ...selectedPost,
             user_id: selectedPost.user_id,

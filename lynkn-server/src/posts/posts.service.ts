@@ -1,32 +1,17 @@
-import { Express } from "express";
-import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { throwDatabaseError } from '../common/database-error';
+import { randomUUID } from 'crypto';
+import { moderatePost } from './post-moderation';
+import { CreatePostDto } from '../common/dtos';
+import { assertOwner, Principal, relationOne } from '../common/security';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { SupabaseService } from "../supabase.service";
 
 @Injectable()
 export class PostsService {
   constructor(private readonly supabaseService: SupabaseService) { }
 
-  public get supabase() {
+  private get supabase() {
     return this.supabaseService.getClient();
-  }
-
-  private async createNotification(
-    userId: number,
-    senderId: number,
-    postId: number,
-    type: string,
-  ) {
-    const { error } = await this.supabase.from("notifications").insert([
-      {
-        user_id: userId,
-        sender_id: senderId,
-        post_id: postId,
-        type: type,
-        is_read: false,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-    if (error) console.error("Error al crear notificación:", error.message);
   }
 
   async findCategories() {
@@ -55,7 +40,7 @@ export class PostsService {
     return Boolean(data);
   }
 
-  private async enrichPostsSocial(posts: any[], viewerId?: number) {
+  private async enrichPostsSocial<T extends { id: number }>(posts: T[], viewerId?: number) {
     if (!posts.length) return posts;
 
     const postIds = posts.map((post) => post.id);
@@ -69,7 +54,7 @@ export class PostsService {
     const countMap = new Map<number, number>();
     const viewerFavoriteSet = new Set<number>();
 
-    (favorites || []).forEach((favorite: any) => {
+    (favorites || []).forEach((favorite) => {
       countMap.set(favorite.post_id, (countMap.get(favorite.post_id) || 0) + 1);
       if (viewerId && Number(favorite.user_id) === Number(viewerId)) {
         viewerFavoriteSet.add(favorite.post_id);
@@ -83,7 +68,17 @@ export class PostsService {
     }));
   }
 
-  async createPost(file: Express.Multer.File, body: any) {
+  async createPost(file: Express.Multer.File, body: CreatePostDto, actor: Principal) {
+    if (actor.role !== 'admin' && actor.status !== 'approved') throw new ForbiddenException('Cuenta pendiente de verificacion');
+    if (!file) throw new BadRequestException('La imagen es obligatoria');
+    const bytes = file.buffer;
+    const png = bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+    const jpeg = bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+    const webp = bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+    const detectedType = png ? 'image/png' : jpeg ? 'image/jpeg' : webp ? 'image/webp' : null;
+    if (!detectedType || bytes.length > 3 * 1024 * 1024) throw new BadRequestException('Imagen no valida');
+    file.mimetype = detectedType;
+    await moderatePost(bytes, detectedType, body.title, body.description);
     let imageUrl: string | null = null;
     const requestedCategory = String(body.category || "general").trim();
     const category = await this.categoryExists(requestedCategory)
@@ -91,15 +86,15 @@ export class PostsService {
       : "general";
 
     if (file) {
-      const fileExt = file.originalname.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      const fileExt = file.mimetype === "image/png" ? "png" : file.mimetype === "image/webp" ? "webp" : "jpg";
+      const fileName = `${randomUUID()}.${fileExt}`;
       const filePath = `posts/${fileName}`;
 
       const { error: uploadError } = await this.supabase.storage
         .from("post_images")
         .upload(filePath, file.buffer, {
           contentType: file.mimetype,
-          upsert: true,
+          upsert: false,
         });
 
       if (uploadError) {
@@ -115,47 +110,21 @@ export class PostsService {
       imageUrl = data.publicUrl;
     }
 
-    const { data: postArray, error: dbError } = await this.supabase
-      .from("posts")
-      .insert([
-        {
-          title: body.title,
-          description: body.description,
-          image_url: imageUrl,
-          user_id: parseInt(body.user_id),
-          lat: parseFloat(body.lat) || 40.4167,
-          lng: parseFloat(body.lng) || -3.7037,
-          max_particip: body.max_participants ? parseInt(body.max_participants) : 0,
-          current_particip: 0,
-          category,
-          event_date: body.event_date || new Date().toISOString(),
-          status: "active",
-          is_visible: true,
-          moderation_status: "approved",
-        },
-      ])
-      .select()
-      .single();
-
-    if (dbError) throw new InternalServerErrorException(dbError.message);
-
-    if (postArray) {
-      const { error: partError } = await this.supabase
-        .from("participations")
-        .insert([
-          {
-            post_id: postArray.id,
-            user_id: postArray.user_id,
-            status: "accepted",
-          },
-        ]);
-
-      if (partError) {
-        console.error("Error al auto-unir al creador:", partError.message);
+    const { data, error } = await this.supabase.rpc('lynkn_create_post', {
+      p_actor_id: actor.userId,
+      p_payload: {
+        ...body, image_url: imageUrl, category,
+        max_particip: body.max_participants ?? 0,
+      },
+    });
+    if (error) {
+      if (imageUrl) {
+        const path = new URL(imageUrl).pathname.split('/post_images/')[1];
+        if (path) await this.supabase.storage.from('post_images').remove([decodeURIComponent(path)]);
       }
+      throwDatabaseError(error);
     }
-
-    return postArray;
+    return data;
   }
 
   async findAll(excludeUserId?: number, viewerId?: number) {
@@ -213,7 +182,7 @@ export class PostsService {
       .order("created_at", { ascending: false });
 
     if (error) throw new InternalServerErrorException(error.message);
-    const posts = (data || []).map((item: any) => item.posts).filter(Boolean);
+    const posts = (data || []).flatMap((item) => { const post = relationOne(item.posts); return post ? [post] : []; });
     return this.enrichPostsSocial(posts, userId);
   }
 
@@ -228,7 +197,7 @@ export class PostsService {
     return {
       post_id: postId,
       favorite_count: data?.length || 0,
-      is_favorited: userId ? (data || []).some((favorite: any) => Number(favorite.user_id) === Number(userId)) : false,
+      is_favorited: userId ? (data || []).some((favorite) => Number(favorite.user_id) === Number(userId)) : false,
     };
   }
 
@@ -256,7 +225,7 @@ export class PostsService {
 
   console.log(`Usuario ${userId} tiene ${data?.length} participaciones totales.`);
 
-  const filtered = data?.filter((req: any) => {
+  const filtered = data?.map((req) => ({ ...req, posts: relationOne(req.posts) })).filter((req) => {
     if (!req.posts) return false; 
     
     return Number(req.user_id) !== Number(req.posts.user_id);
@@ -268,337 +237,73 @@ export class PostsService {
 }
 
   async requestJoin(postId: number, userId: number) {
+    const { data, error } = await this.supabase.rpc('lynkn_participation', {
+      p_action: 'join', p_actor_id: userId, p_post_id: postId,
+    });
+    if (error) throwDatabaseError(error);
+    return data;
+  }
+
+  async deleteParticipation(id: number, actor: Principal) {
+    const { data, error } = await this.supabase.rpc('lynkn_participation', {
+      p_action: 'cancel', p_actor_id: actor.userId, p_participation_id: id,
+    });
+    if (error) throwDatabaseError(error);
+    return data;
+  }
+
+  async getParticipants(postId: number, actor: Principal) {
     const { data: post, error: postError } = await this.supabase
       .from("posts")
-      .select("max_particip, current_particip, user_id, title")
+      .select("user_id, is_visible")
       .eq("id", postId)
-      .single();
-    if (postError || !post)
-      throw new InternalServerErrorException("No se encontro el post");
-
-    if (Number(post.user_id) === Number(userId)) {
-      throw new BadRequestException("El organizador ya pertenece a su propio evento");
-    }
-
-    const isUnlimited = post.max_particip === 0;
-    const isFull = !isUnlimited && Number(post.current_particip || 0) >= Number(post.max_particip || 0);
-
-    const { data: existingParticipation, error: existingError } = await this.supabase
-      .from("participations")
-      .select("*, users(username)")
-      .eq("post_id", postId)
-      .eq("user_id", userId)
       .maybeSingle();
 
-    if (existingError) throw new InternalServerErrorException(existingError.message);
-    if (existingParticipation) return existingParticipation;
-
-    if (isFull) {
-      throw new BadRequestException("El evento ya esta completo");
+    if (postError) throw new InternalServerErrorException('No se pudo consultar el evento');
+    if (!post || (!post.is_visible && Number(post.user_id) !== actor.userId && actor.role !== 'admin')) {
+      throw new NotFoundException('Evento no encontrado');
     }
+    const ownerId = Number(post.user_id);
 
-    const { data: participation, error: partError } = await this.supabase
-      .from("participations")
-      .insert([
-        {
-          post_id: postId,
-          user_id: userId,
-          status: isUnlimited ? "accepted" : "pending",
-        },
-      ])
-      .select("*, users(username)")
-      .single();
-
-    if (partError) throw new InternalServerErrorException(partError.message);
-
-    if (isUnlimited) {
-      await this.supabase.rpc("increment_participant", { row_id: postId });
-      await this.supabase
-        .from("posts")
-        .update({ is_chat_active: true })
-        .eq("id", postId);
-      await this.supabase.from("messages").insert([
-        {
-          post_id: postId,
-          sender_id: userId,
-          content: `SYS_USER_JOINED:${participation.users.username}`,
-          type: "system",
-        },
-      ]);
-      await this.createNotification(post.user_id, userId, postId, "accepted");
-    } else {
-      await this.createNotification(
-        post.user_id,
-        userId,
-        postId,
-        "join_request",
-      );
-      await this.createNotification(
-        userId,
-        post.user_id,
-        postId,
-        "info_pending",
-      );
-    }
-    return participation;
-  }
-
-  async deleteParticipation(id: number) {
-    const { data, error: fetchError } = await this.supabase
-      .from('participations')
-      .select(`
-      post_id, 
-      status, 
-      user_id, 
-      users(username), 
-      posts(user_id, title)
-    `)
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !data) throw new InternalServerErrorException('No se encontró la participación');
-
-    const part = data as any;
-    const username = part.users?.username;
-    const ownerId = part.posts?.user_id;
-    const postTitle = part.posts?.title;
-
-    if (part.status === 'accepted') {
-      await this.supabase.rpc('decrement_participant', { row_id: part.post_id });
-
-      await this.supabase
-        .from('messages')
-        .insert([{
-          post_id: part.post_id,
-          sender_id: part.user_id,
-          content: `SYS_USER_LEFT:${username}`,
-          type: 'system'
-        }]);
-
-      if (ownerId) {
-        await this.createNotification(
-          ownerId,
-          part.user_id,
-          part.post_id,
-          'member_left'
-        );
-      }
-    }
-
-    await this.createNotification(
-      part.user_id,
-      ownerId || 0,
-      part.post_id,
-      'leave_confirm'
-    );
-
-    const { error: deleteError } = await this.supabase
-      .from('participations')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) throw new InternalServerErrorException(deleteError.message);
-
-    return { success: true };
-  }
-
-  async getParticipants(postId: number) {
-    const { data: post } = await this.supabase
-      .from("posts")
-      .select("user_id")
-      .eq("id", postId)
-      .single();
-
-    const ownerId = Number(post?.user_id);
-
-    const { data, error } = await this.supabase
+    let query = this.supabase
       .from("participations")
       .select("id, status, user_id, users (username, foto_perfil)")
       .eq("post_id", postId)
-      .neq("user_id", ownerId); // Usamos la variable casteada
+      .neq("user_id", ownerId);
+    if (actor.userId !== ownerId && actor.role !== "admin") query = query.or("status.eq.accepted,user_id.eq." + actor.userId);
+    const { data, error } = await query;
 
     if (error) throw new InternalServerErrorException(error.message);
     return data;
   }
 
-  async updateParticipationStatus(participationId: number, status: "accepted" | "rejected") {
-    try {
-      const { data: currentPart, error: currentError } = await this.supabase
-        .from("participations")
-        .select("status, post_id, user_id, users(username), posts(user_id, max_particip, current_particip)")
-        .eq("id", participationId)
-        .single();
-
-      if (currentError || !currentPart) throw new InternalServerErrorException("No se encontró la participación");
-
-      const postData = currentPart.posts as any;
-      const ownerId = postData?.user_id;
-
-      if (status === "rejected" && currentPart.user_id === ownerId) {
-        throw new BadRequestException("El organizador no puede ser expulsado de su propio evento");
-      }
-
-      const isAcceptingNewParticipant = status === "accepted" && currentPart.status !== "accepted";
-      const isUnlimited = Number(postData?.max_particip || 0) === 0;
-      const isFull = !isUnlimited && Number(postData?.current_particip || 0) >= Number(postData?.max_particip || 0);
-
-      if (isAcceptingNewParticipant && isFull) {
-        throw new BadRequestException("El evento ya esta completo");
-      }
-
-      const { data: updatedPart, error: updateError } = await this.supabase
-        .from("participations")
-        .update({ status })
-        .eq("id", participationId)
-        .select("*, posts(user_id, title)")
-        .single();
-
-      if (updateError) throw new InternalServerErrorException(updateError.message);
-
-      const userData = currentPart.users as any;
-      const participantUsername = Array.isArray(userData) ? userData[0]?.username : userData?.username;
-
-      if (updatedPart) {
-        // CASO A: ACEPTAR A ALGUIEN NUEVO
-        if (isAcceptingNewParticipant) {
-          await this.supabase.rpc("increment_participant", { row_id: updatedPart.post_id });
-          await this.supabase
-            .from("posts")
-            .update({ is_chat_active: true })
-            .eq("id", updatedPart.post_id);
-
-          await this.supabase.from("messages").insert([{
-            post_id: updatedPart.post_id,
-            sender_id: updatedPart.posts.user_id,
-            content: `SYS_USER_JOINED:${participantUsername}`,
-            type: "system"
-          }]);
-
-          await this.createNotification(
-            updatedPart.user_id,
-            updatedPart.posts.user_id,
-            updatedPart.post_id,
-            "accepted"
-          );
-        }
-
-        // CASO B: EXPULSAR / RECHAZAR A ALGUIEN QUE YA ESTABA DENTRO
-        if (currentPart.status === "accepted" && status === "rejected") {
-          await this.supabase.rpc("decrement_participant", { row_id: updatedPart.post_id });
-
-          await this.supabase.from("messages").insert([{
-            post_id: updatedPart.post_id,
-            sender_id: updatedPart.posts.user_id,
-            content: `SYS_USER_KICKED:${participantUsername}`,
-            type: "system"
-          }]);
-
-          await this.createNotification(
-            updatedPart.user_id,
-            updatedPart.posts.user_id,
-            updatedPart.post_id,
-            'kicked'
-          );
-        }
-
-        if (currentPart.status !== "accepted" && status === "rejected") {
-          await this.createNotification(
-            updatedPart.user_id,
-            updatedPart.posts.user_id,
-            updatedPart.post_id,
-            "rejected"
-          );
-        }
-
-        await this.supabase
-          .from("notifications")
-          .delete()
-          .eq("user_id", updatedPart.posts.user_id)
-          .eq("post_id", updatedPart.post_id)
-          .eq("sender_id", updatedPart.user_id)
-          .eq("type", "join_request");
-      }
-
-      return updatedPart;
-    } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException("No se pudo procesar el cambio de estado");
-    }
+  async updateParticipationStatus(id: number, status: 'accepted' | 'rejected', actor: Principal) {
+    const { data, error } = await this.supabase.rpc('lynkn_participation', {
+      p_action: 'set', p_actor_id: actor.userId, p_participation_id: id, p_status: status,
+    });
+    if (error) throwDatabaseError(error);
+    return data;
   }
 
   async deletePost(postId: number, userId: number) {
-    const { data: participants, error: fetchError } = await this.supabase
-      .from('participations')
-      .select('user_id')
-      .eq('post_id', postId)
-      .neq('user_id', userId);
-
-    if (fetchError) throw new InternalServerErrorException("Error al obtener participantes");
-
-    if (participants && participants.length > 0) {
-      const { data: postData } = await this.supabase
-        .from('posts')
-        .select('title')
-        .eq('id', postId)
-        .single();
-
-      const notifications = participants.map(p => ({
-        user_id: p.user_id,
-        sender_id: userId,
-        post_id: null,
-        type: 'post_deleted',
-        is_read: false,
-        created_at: new Date().toISOString()
-      }));
-
-      await this.supabase.from('notifications').insert(notifications);
-    }
-
-    const { error: deleteError } = await this.supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId)
-      .eq('user_id', userId);
-
-    if (deleteError) throw new InternalServerErrorException(deleteError.message);
-
-    return { success: true };
+    const { data, error } = await this.supabase.rpc('lynkn_delete_post', {
+      p_post_id: postId, p_actor_id: userId,
+    });
+    if (error) throwDatabaseError(error);
+    return data;
   }
 
-  async kickParticipant(participationId: number, ownerId: number) {
-    const { data: part, error: fetchError } = await this.supabase
-      .from('participations')
-      .select('*, users(username), posts(title)')
-      .eq('id', participationId)
-      .single();
-
-    if (fetchError || !part) throw new Error("No se encontró la participación");
-
-    const { error: updateError } = await this.supabase
-      .from('participations')
-      .update({ status: 'rejected' })
-      .eq('id', participationId);
-
-    if (updateError) throw new Error("Error al expulsar");
-
-    if (part.status === 'accepted') {
-      await this.supabase.rpc('decrement_participant', { row_id: part.post_id });
-
-      await this.supabase.from('messages').insert([{
-        post_id: part.post_id,
-        sender_id: ownerId,
-        content: `SYS_USER_KICKED:${part.users.username}`,
-        type: 'system'
-      }]);
-    }
-
-    await this.createNotification(
-      part.user_id,
-      ownerId,
-      part.post_id,
-      'kicked'
-    );
-
-    return { success: true };
+  async handleNotificationAction(notifId: number, status: 'accepted' | 'rejected', actor: Principal) {
+    const { data: notification, error } = await this.supabase.from('notifications')
+      .select('post_id, sender_id, user_id, type').eq('id', notifId).maybeSingle();
+    if (error) throw new InternalServerErrorException('No se pudo consultar la notificacion');
+    if (!notification) throw new NotFoundException('Notificacion no encontrada');
+    assertOwner(actor, Number(notification.user_id));
+    if (notification.type !== 'join_request') throw new BadRequestException('Accion no permitida');
+    const { data: participation, error: partError } = await this.supabase.from('participations').select('id')
+      .eq('post_id', notification.post_id).eq('user_id', notification.sender_id).maybeSingle();
+    if (partError) throw new InternalServerErrorException('No se pudo consultar la solicitud');
+    if (!participation) throw new NotFoundException('Solicitud no encontrada');
+    return this.updateParticipationStatus(participation.id, status, actor);
   }
 }

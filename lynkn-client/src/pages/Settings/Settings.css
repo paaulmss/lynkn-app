@@ -1,7 +1,7 @@
 /* ==========================================================================
     CONTENEDOR PRINCIPAL Y LAYOUT
    ========================================================================== */
-.main-content {
+.main-content.settings-main {
   min-height: 100vh; 
   overflow-y: auto; 
   -webkit-overflow-scrolling: touch; 
@@ -11,9 +11,11 @@
 }
 
 .settings-page-wrapper {
-  padding: calc(var(--nav-height) + 24px) var(--page-gutter) 44px;
+  padding: 24px var(--page-gutter) 44px;
   max-width: 900px;
   margin: 0 auto;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -317,7 +319,7 @@ body.light-mode .danger-zone-card {
 
 @media (max-width: 640px) {
   .settings-page-wrapper {
-    padding: 88px 14px 28px;
+    padding: 20px 14px 28px;
   }
 
   .settings-header {

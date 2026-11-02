@@ -1,25 +1,27 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthProvider"; 
+import { AuthProvider } from "./context/AuthProvider";
 import { Toaster } from "sonner";
 
-import Home from "./pages/Home/Home";
-import Register from "./pages/Auth/Register";
-import Login from "./pages/Auth/Login";
-import Profile from "./pages/Profile/Profile";
-import AdminPanel from "./pages/Admin/AdminPanel";
-import VerifyMobile from "./pages/Auth/VerifyMobile";
+const Home = lazy(() => import('./pages/Home/Home'));
+const Register = lazy(() => import('./pages/Auth/Register'));
+const Login = lazy(() => import('./pages/Auth/Login'));
+const Profile = lazy(() => import('./pages/Profile/Profile'));
+const AdminPanel = lazy(() => import('./pages/Admin/AdminPanel'));
+const VerifyMobile = lazy(() => import('./pages/Auth/VerifyMobile'));
 import ProtectedRoute from "./components/ProtectedRoute";
-import Explore from "./pages/Explorer/Explore";
-import NotificationsPage from "./components/notifcations/NotificationsPage"; 
-import MessagesPage from "./pages/Messages/MessagesPage";
-import Settings from "./pages/Settings/Settings";
-import MyRequestsPage from "./pages/Requests/MyRequestsPage";
+const Explore = lazy(() => import('./pages/Explorer/Explore'));
+const NotificationsPage = lazy(() => import('./components/notifcations/NotificationsPage'));
+const MessagesPage = lazy(() => import('./pages/Messages/MessagesPage'));
+const Settings = lazy(() => import('./pages/Settings/Settings'));
+const MyRequestsPage = lazy(() => import('./pages/Requests/MyRequestsPage'));
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <Toaster position="bottom-right" theme="dark" richColors closeButton />
+        <Suspense fallback={<div role="status">Cargando...</div>}>
         <Routes>
           {/* --- VISTAS PUBLICAS --- */}
           <Route path="/" element={<Home />} />
@@ -108,6 +110,7 @@ function App() {
             }
           />
         </Routes>
+        </Suspense>
       </AuthProvider>
     </Router>
   );

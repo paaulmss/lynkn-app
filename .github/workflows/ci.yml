@@ -1,0 +1,27 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        application: [lynkn-server, lynkn-client]
+    defaults:
+      run:
+        working-directory: ${{ matrix.application }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.application }}/package-lock.json
+      - run: npm install --global npm@11.6.2
+      - run: npm ci --ignore-scripts --no-audit
+      - run: npm run build
+      - run: npm test
+      - if: matrix.application == 'lynkn-client'
+        run: npm run lint
+      - run: npm audit --omit=dev --audit-level=high

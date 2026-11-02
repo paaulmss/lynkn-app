@@ -1,159 +1,83 @@
-# LYNKN
+﻿# Lynkn App
 
-LYNKN es una aplicacion social para crear quedadas, descubrir eventos cercanos, solicitar acceso, gestionar participantes y hablar por chat cuando el organizador acepta la solicitud. El proyecto esta dividido en frontend web/movil, backend API y proyecto Android generado con Capacitor.
+Plataforma social para descubrir actividades cercanas, organizar eventos y conectar con otras personas. Combina un mapa interactivo, gestión de participantes y mensajería en tiempo real en una aplicación web con proyectos móviles de Capacitor.
+
+## Funcionalidades
+
+- Exploración de publicaciones en mapa y listado, con búsqueda y categorías.
+- Creación de eventos con imagen, ubicación, fecha y límite de participantes.
+- Solicitudes de participación, aprobación del organizador y control de aforo.
+- Chat de evento y notificaciones en tiempo real.
+- Perfiles, favoritos, seguimiento de usuarios y preferencias de idioma y tema.
+- Inicio de sesión con contraseña o Google y verificación de perfiles.
+- Panel de administración para usuarios, publicaciones y verificaciones.
+- Moderación de texto e imágenes mediante Gemini.
+
+## Tecnologías y arquitectura
+
+| Área | Tecnologías |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, React Router, MapLibre GL, i18next, PrimeReact |
+| Backend | NestJS, TypeScript, Passport JWT, Socket.IO, class-validator |
+| Datos y archivos | PostgreSQL y Storage en Supabase |
+| Móvil | Capacitor, proyectos Android e iOS |
+| Calidad | Jest, Vitest, PostgreSQL embebido con PGlite, ESLint y GitHub Actions |
+
+El cliente accede a los datos a través de la API de NestJS. El backend organiza la lógica por módulos, valida las entradas con DTOs y obtiene la identidad del usuario desde su token. Los cambios de participación y los borrados relacionados se resuelven mediante funciones transaccionales de PostgreSQL. La base de datos utiliza RLS y acceso restringido al servidor para las tablas de la aplicación.
 
 ## Estructura
 
-```txt
-lynkn-app/
-  lynkn-client/      Frontend React, Vite, Capacitor y Android/iOS
-  lynkn-server/      Backend NestJS, Supabase, Socket.IO y Auth
-  README.md          Guia general del repositorio
+```text
+lynkn-client/   Aplicación React y proyectos móviles
+lynkn-server/   API NestJS, autenticación y tiempo real
+database/      Funciones SQL y comprobaciones de integración
+.github/       Integración continua
 ```
 
-## Stack principal
+## Desarrollo local
 
-- Frontend: React 19, TypeScript, Vite, React Router, MapLibre, i18next, PrimeReact, Socket.IO client.
-- Backend: NestJS, TypeScript, Supabase, Socket.IO, JWT, Google Auth, Gemini.
-- Base de datos y storage: Supabase.
-- Movil: Capacitor 6 con Android.
-- Testing frontend: Vitest.
+Requisitos: Node.js 22 (mínimo 22.12), npm y un proyecto Supabase con el esquema de la aplicación. La moderación necesita una clave de Gemini; Google requiere su correspondiente cliente OAuth.
 
-## Requisitos
+Instala las dependencias desde la raíz:
 
-- Node.js 20 o superior recomendado.
-- npm.
-- Cuenta/proyecto de Supabase configurado.
-- Backend desplegado o ejecutandose en local.
-- Para Android: Android SDK, Platform Tools y un dispositivo con depuracion USB o emulador.
-
-## Instalacion rapida
-
-Instala dependencias en cada parte:
-
-```powershell
-cd lynkn-server
-npm install
-
-cd ..\lynkn-client
-npm install
+```sh
+npm --prefix lynkn-server ci
+npm --prefix lynkn-client ci
 ```
 
-## Variables de entorno
+Copia `.env.example` a `.env` dentro de cada aplicación y completa los valores. Las claves privadas de Supabase, Gemini y JWT pertenecen exclusivamente al servidor. Las variables `VITE_*` son públicas y se incluyen en el navegador.
 
-El cliente usa `lynkn-client/.env`:
+Ejecuta cada proceso en una terminal:
 
-```env
-VITE_API_URL=http://localhost:4000
-VITE_MOBILE_API_URL=https://tu-backend-publico.com
-VITE_SOCKET_URL=https://tu-backend-publico.com
-VITE_STADIA_API_KEY=tu_api_key
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu_anon_key
-VITE_GOOGLE_CLIENT_ID=tu_google_client_id
+```sh
+npm run dev:server
+npm run dev:client
 ```
 
-El servidor usa `lynkn-server/.env`:
+Cliente: `http://localhost:5173`. API: `http://localhost:4000`.
 
-```env
-PORT=4000
-JWT_SECRET=una_clave_segura
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_KEY=tu_service_role_o_key_servidor
-GOOGLE_CLIENT_ID=tu_google_client_id
-GEMINI_API_KEY=tu_gemini_api_key
-```
+Consulta [database/README.md](database/README.md) para los requisitos y scripts de base de datos.
 
-No subas claves reales a GitHub. Usa variables de entorno del proveedor en produccion.
+## Comprobaciones
 
-## Ejecutar en local
+Desde la raíz:
 
-Backend:
-
-```powershell
-cd lynkn-server
-npm run start:dev
-```
-
-Frontend:
-
-```powershell
-cd lynkn-client
-npm run dev
-```
-
-Por defecto:
-
-- Cliente: `http://localhost:5173`
-- Backend local recomendado: `http://localhost:4000`
-- Backend en produccion usado por movil: definido en `VITE_MOBILE_API_URL`
-
-## Comandos utiles
-
-Cliente:
-
-```powershell
-npm run dev
+```sh
 npm run build
+npm test
 npm run lint
-npm run test
-npm run cap:sync
 ```
 
-Servidor:
+Las pruebas cubren autorización HTTP, autenticación, WebSockets, moderación y reglas transaccionales de participación y borrado. Las comprobaciones SQL de integración utilizan transacciones revertidas para no conservar los datos de prueba.
 
-```powershell
-npm run start:dev
-npm run build
-npm run start:prod
+## Web y móvil
+
+El frontend se construye en `lynkn-client/dist` y dispone de configuración SPA para Vercel. El backend puede ejecutarse como servicio Node en Render o con el Dockerfile incluido. Configura las variables de entorno, los orígenes CORS y el cliente OAuth para cada entorno.
+
+Para sincronizar el frontend con los proyectos móviles:
+
+```sh
+npm --prefix lynkn-client run cap:sync
 ```
 
-Android:
-
-```powershell
-cd lynkn-client
-npm run cap:sync
-cd android
-.\gradlew assembleDebug
-.\gradlew installDebug
-```
-
-## Flujo de la app
-
-1. El usuario se registra o inicia sesion.
-2. El perfil pasa por verificacion.
-3. El usuario puede explorar eventos en mapa o vista de posts.
-4. Puede solicitar unirse a eventos con plazas limitadas o acceder directamente a eventos ilimitados.
-5. El organizador acepta o rechaza solicitudes.
-6. Al aceptar, el chat del evento queda disponible para el usuario aceptado, sin esperar a que el evento llegue al aforo maximo.
-7. Los participantes aceptados pueden enviar mensajes en tiempo real.
-
-## Despliegue recomendado
-
-- Frontend web: Vercel.
-- Backend: Render, Railway, Fly.io o un VPS Node.
-- Supabase: base de datos, auth auxiliar, storage y realtime.
-- Android: build local con Gradle/Capacitor apuntando a `VITE_MOBILE_API_URL`.
-
-Para una presentacion fuera de tu red local, usa siempre backend publico HTTPS. No dependas de `localhost` ni de la IP del ordenador.
-
-## Documentacion por modulo
-
-- [Cliente web y movil](./lynkn-client/README.md)
-- [Servidor API](./lynkn-server/README.md)
-- [Android](./lynkn-client/android/README.md)
-
-## Verificacion antes de entregar
-
-```powershell
-cd lynkn-server
-npm run build
-
-cd ..\lynkn-client
-npm run lint
-npm run test
-npm run build
-npm run cap:sync
-```
-
-Si todo pasa, el proyecto queda listo para web y para generar una APK/debug build de Android.
+Android requiere su SDK; iOS requiere macOS y Xcode. La configuración actual del backend está orientada a una única instancia: las sesiones temporales y parte del estado de tiempo real permanecen en memoria.
