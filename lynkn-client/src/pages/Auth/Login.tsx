@@ -20,6 +20,7 @@ const GoogleCustomButton = () => {
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       if (!tokenResponse.access_token) {
+        setIsGoogleLoading(false);
         toast.error(t("auth.errors.ERR_GOOGLE_TOKEN_INVALID"));
         return;
       }
@@ -31,19 +32,30 @@ const GoogleCustomButton = () => {
         );
         login(data);
       } catch (error) {
-        console.error("Error enviando token a NestJS:", error);
+        console.error("Google login request failed", error instanceof Error ? error.name : 'unknown');
         toast.error(t("auth.errors.ERR_GOOGLE_TOKEN_INVALID"));
       } finally {
         setIsGoogleLoading(false);
       }
     },
-    onError: () => toast.error(t("auth.errors.ERR_GOOGLE_TOKEN_INVALID")),
+    onError: () => {
+      setIsGoogleLoading(false);
+      toast.error(t("auth.errors.ERR_GOOGLE_TOKEN_INVALID"));
+    },
+    onNonOAuthError: (error) => {
+      setIsGoogleLoading(false);
+      if (error.type === 'popup_closed') return;
+      toast.error(t("auth.errors.ERR_GOOGLE_POPUP_BLOCKED"));
+    },
   });
 
   return (
     <button
       type="button"
-      onClick={() => handleGoogleLogin()}
+      onClick={() => {
+        setIsGoogleLoading(true);
+        handleGoogleLogin();
+      }}
       className="btn-google-login"
       disabled={isGoogleLoading}
     >
